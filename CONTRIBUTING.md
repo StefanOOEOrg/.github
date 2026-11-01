@@ -157,6 +157,15 @@ raised explicitly in this document — never silently dropped in CI.
 | 12 Branch protection | PR required, no force push, no deletion | organization ruleset |
 | 13 Frontend | `tsc --noEmit`, `eslint`, `prettier --check`, `ng build` | CI |
 
+## 14. Contributions from outside the organization
+
+Inbound changes are accepted under the repository's license (MIT, see `LICENSE`). Opening a pull request is the
+agreement: you confirm that you wrote the change or hold the rights to submit it, and you license it under the same
+terms. No separate CLA document is required.
+
+External pull requests arrive as forks, their first workflow run is approved by a maintainer, and they are reviewed
+by a maintainer and merged by the repository owner (§12).
+
 ## Rollout
 
 A repository adopts this document the next time it is touched in a way that already changes its
