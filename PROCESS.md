@@ -56,6 +56,11 @@ There are no epics. Themes spanning several repositories (e.g. a linter migratio
 
 ## Workflow
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/process-internal-dark.svg">
+  <img alt="Swimlane diagram of the development process" src="assets/process-internal-light.svg">
+</picture>
+
 1. **Backlog** – Ideas become issues. The Lead clarifies them with the product owner and writes acceptance criteria. Priority is the order in the backlog.
 2. **Sprint planning** – The product owner pulls tasks and bugs into the current iteration.
 3. **Refinement** – The Lead splits each feature into task sub-issues: goal, acceptance criteria, scope (allowed files, test command), steps, points and a line ``Branch: `wp/<name>` (base: `main`)``. If needed, the Lead first opens a scaffold PR with failing tests.
@@ -85,6 +90,11 @@ A PR can be merged only when:
 ## External contributions
 
 Contributions are welcome via fork and pull request.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/process-external-dark.svg">
+  <img alt="Swimlane diagram of an external contribution" src="assets/process-external-light.svg">
+</picture>
 
 - All public repositories are licensed under **MIT**; contributions are accepted under the same license.
 - CI for fork PRs runs only after a maintainer approves the workflow run. Workflows use `pull_request` (no secrets, read-only token).

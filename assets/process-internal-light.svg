@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1628" height="1446" viewBox="0 0 1628 1446" font-family="'JetBrains Mono', ui-monospace, monospace">
+<defs>
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e2e8f0" stroke-width="0.5"/></pattern>
+<marker id="arrow0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#b45309"/></marker>
+<marker id="arrow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#0e7490"/></marker>
+<marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6d28d9"/></marker>
+<marker id="arrow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#047857"/></marker>
+<marker id="arrow4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#be123c"/></marker>
+</defs>
+<rect width="1628" height="1446" fill="#ffffff"/>
+<rect width="1628" height="1446" fill="url(#grid)"/>
+<text x="28" y="46" fill="#0f172a" font-size="20" font-weight="bold">Development process</text>
+<text x="28" y="70" fill="#475569" font-size="11">One task = one developer run = one PR · Lead and product owner approve · several dev instances in parallel</text>
+<rect x="28" y="90" width="300" height="1312" rx="12" fill="rgba(180, 83, 9, 0.06)" stroke="#b45309" stroke-width="1" stroke-dasharray="8,4"/>
+<text x="44" y="110" fill="#b45309" font-size="13" font-weight="bold">Product owner</text>
+<text x="44" y="125" fill="#475569" font-size="9">StefanOOE · backlog, 2nd approval</text>
+<rect x="346" y="90" width="300" height="1312" rx="12" fill="rgba(14, 116, 144, 0.06)" stroke="#0e7490" stroke-width="1" stroke-dasharray="8,4"/>
+<text x="362" y="110" fill="#0e7490" font-size="13" font-weight="bold">Lead</text>
+<text x="362" y="125" fill="#475569" font-size="9">StefanOOELeadBot · refine, review, merge</text>
+<rect x="664" y="90" width="300" height="1312" rx="12" fill="rgba(109, 40, 217, 0.06)" stroke="#6d28d9" stroke-width="1" stroke-dasharray="8,4"/>
+<text x="680" y="110" fill="#6d28d9" font-size="13" font-weight="bold">Project board</text>
+<text x="680" y="125" fill="#475569" font-size="9">Product Backlog · dispatcher</text>
+<rect x="982" y="90" width="300" height="1312" rx="12" fill="rgba(4, 120, 87, 0.06)" stroke="#047857" stroke-width="1" stroke-dasharray="8,4"/>
+<text x="998" y="110" fill="#047857" font-size="13" font-weight="bold">Developer (dev-n)</text>
+<text x="998" y="125" fill="#475569" font-size="9">StefanOOEDevBot · one task per run</text>
+<rect x="1300" y="90" width="300" height="1312" rx="12" fill="rgba(190, 18, 60, 0.06)" stroke="#be123c" stroke-width="1" stroke-dasharray="8,4"/>
+<text x="1316" y="110" fill="#be123c" font-size="13" font-weight="bold">GitHub</text>
+<text x="1316" y="125" fill="#475569" font-size="9">protected main · CI · 2 approvals</text>
+<path d="M 308 169 L 366 169" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
+<path d="M 496 192 L 496 220" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
+<path d="M 626 243 L 684 243" fill="none" stroke="#6d28d9" stroke-width="1.4" marker-end="url(#arrow2)"/>
+<path d="M 814 266 L 814 280 L 178 280 L 178 294" fill="none" stroke="#b45309" stroke-width="1.4" marker-end="url(#arrow0)"/>
+<path d="M 178 340 L 178 354 L 496 354 L 496 368" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
+<path d="M 496 414 L 496 442" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
+<path d="M 626 465 L 684 465" fill="none" stroke="#6d28d9" stroke-width="1.4" marker-end="url(#arrow2)"/>
+<path d="M 814 488 L 814 516" fill="none" stroke="#6d28d9" stroke-width="1.4" marker-end="url(#arrow2)"/>
+<path d="M 814 562 L 814 590" fill="none" stroke="#6d28d9" stroke-width="1.4" marker-end="url(#arrow2)"/>
+<path d="M 944 613 L 1002 613" fill="none" stroke="#047857" stroke-width="1.4" marker-end="url(#arrow3)"/>
+<path d="M 1132 636 L 1132 664" fill="none" stroke="#047857" stroke-width="1.4" marker-end="url(#arrow3)"/>
+<path d="M 1132 710 L 1132 738" fill="none" stroke="#047857" stroke-width="1.4" marker-end="url(#arrow3)"/>
+<path d="M 1262 761 L 1320 761" fill="none" stroke="#be123c" stroke-width="1.4" marker-end="url(#arrow4)"/>
+<path d="M 1132 784 L 1132 798 L 814 798 L 814 812" fill="none" stroke="#6d28d9" stroke-width="1.4" marker-end="url(#arrow2)"/>
+<path d="M 814 858 L 814 872 L 496 872 L 496 886" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
+<path d="M 496 932 L 496 960" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
+<path d="M 626 983 L 1320 983" fill="none" stroke="#be123c" stroke-width="1.4" marker-end="url(#arrow4)"/>
+<rect x="1120" y="973" width="52" height="16" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="1146" y="985" fill="#be123c" font-size="9.5" text-anchor="middle">Approve</text>
+<path d="M 1450 1006 L 1450 1020 L 496 1020 L 496 1034" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
+<path d="M 496 1080 L 496 1094 L 178 1094 L 178 1108" fill="none" stroke="#b45309" stroke-width="1.4" marker-end="url(#arrow0)"/>
+<path d="M 178 1154 L 178 1168 L 1450 1168 L 1450 1182" fill="none" stroke="#be123c" stroke-width="1.4" marker-end="url(#arrow4)"/>
+<rect x="1424" y="1146" width="52" height="16" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="1450" y="1158" fill="#be123c" font-size="9.5" text-anchor="middle">Approve</text>
+<path d="M 1450 1228 L 1450 1242 L 496 1242 L 496 1256" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
+<path d="M 496 1302 L 496 1316 L 814 1316 L 814 1330" fill="none" stroke="#6d28d9" stroke-width="1.4" marker-end="url(#arrow2)"/>
+<path d="M 626 997 L 954 997 L 954 465 L 944 465" fill="none" stroke="#6d28d9" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow2)"/>
+<rect x="793" y="721" width="160" height="16" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="948" y="733" fill="#6d28d9" font-size="9.5" text-anchor="end">Request changes → round 2</text>
+<rect x="48" y="146" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="48" y="146" width="260" height="46" rx="6" fill="rgba(180, 83, 9, 0.12)" stroke="#b45309" stroke-width="1.4"/>
+<text x="178" y="167" fill="#0f172a" font-size="10.5" text-anchor="middle">Raise an idea,</text>
+<text x="178" y="180" fill="#0f172a" font-size="10.5" text-anchor="middle">answer questions</text>
+<rect x="366" y="146" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="366" y="146" width="260" height="46" rx="6" fill="rgba(14, 116, 144, 0.12)" stroke="#0e7490" stroke-width="1.4"/>
+<text x="496" y="167" fill="#0f172a" font-size="10.5" text-anchor="middle">Clarify requirements</text>
+<text x="496" y="180" fill="#0f172a" font-size="10.5" text-anchor="middle">(one question per round)</text>
+<rect x="366" y="220" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="366" y="220" width="260" height="46" rx="6" fill="rgba(14, 116, 144, 0.12)" stroke="#0e7490" stroke-width="1.4"/>
+<text x="496" y="241" fill="#0f172a" font-size="10.5" text-anchor="middle">Feature issue:</text>
+<text x="496" y="254" fill="#0f172a" font-size="10.5" text-anchor="middle">goal + acceptance criteria</text>
+<rect x="684" y="220" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="684" y="220" width="260" height="46" rx="6" fill="rgba(109, 40, 217, 0.12)" stroke="#6d28d9" stroke-width="1.4" stroke-dasharray="4,3"/>
+<text x="814" y="247" fill="#0f172a" font-size="10.5" text-anchor="middle">Triage → Backlog</text>
+<rect x="48" y="294" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="48" y="294" width="260" height="46" rx="6" fill="rgba(180, 83, 9, 0.12)" stroke="#0f172a" stroke-width="2"/>
+<text x="178" y="315" fill="#0f172a" font-size="10.5" text-anchor="middle">Sprint planning:</text>
+<text x="178" y="328" fill="#0f172a" font-size="10.5" text-anchor="middle">pull tasks into iteration</text>
+<rect x="366" y="368" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="366" y="368" width="260" height="46" rx="6" fill="rgba(14, 116, 144, 0.12)" stroke="#0e7490" stroke-width="1.4"/>
+<text x="496" y="389" fill="#0f172a" font-size="10.5" text-anchor="middle">Refine: task sub-issues,</text>
+<text x="496" y="402" fill="#0f172a" font-size="10.5" text-anchor="middle">scaffold + failing tests</text>
+<rect x="366" y="442" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="366" y="442" width="260" height="46" rx="6" fill="rgba(14, 116, 144, 0.12)" stroke="#0e7490" stroke-width="1.4"/>
+<text x="496" y="463" fill="#0f172a" font-size="10.5" text-anchor="middle">Hand-over: assign DevBot,</text>
+<text x="496" y="476" fill="#0f172a" font-size="10.5" text-anchor="middle">set Instance</text>
+<rect x="684" y="442" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="684" y="442" width="260" height="46" rx="6" fill="rgba(109, 40, 217, 0.12)" stroke="#6d28d9" stroke-width="1.4" stroke-dasharray="4,3"/>
+<text x="814" y="469" fill="#0f172a" font-size="10.5" text-anchor="middle">Ready</text>
+<rect x="684" y="516" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="684" y="516" width="260" height="46" rx="6" fill="rgba(109, 40, 217, 0.12)" stroke="#6d28d9" stroke-width="1.4" stroke-dasharray="4,3"/>
+<text x="814" y="537" fill="#0f172a" font-size="10.5" text-anchor="middle">Dispatcher: first Ready</text>
+<text x="814" y="550" fill="#0f172a" font-size="10.5" text-anchor="middle">task per free instance</text>
+<rect x="684" y="590" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="684" y="590" width="260" height="46" rx="6" fill="rgba(109, 40, 217, 0.12)" stroke="#6d28d9" stroke-width="1.4" stroke-dasharray="4,3"/>
+<text x="814" y="617" fill="#0f172a" font-size="10.5" text-anchor="middle">In Progress</text>
+<rect x="1002" y="590" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="1002" y="590" width="260" height="46" rx="6" fill="rgba(4, 120, 87, 0.12)" stroke="#047857" stroke-width="1.4"/>
+<text x="1132" y="611" fill="#0f172a" font-size="10.5" text-anchor="middle">Own worktree,</text>
+<text x="1132" y="624" fill="#0f172a" font-size="10.5" text-anchor="middle">TDD red → green</text>
+<rect x="1002" y="664" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="1002" y="664" width="260" height="46" rx="6" fill="rgba(4, 120, 87, 0.12)" stroke="#047857" stroke-width="1.4"/>
+<text x="1132" y="691" fill="#0f172a" font-size="10.5" text-anchor="middle">Lint, one commit, push</text>
+<rect x="1002" y="738" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="1002" y="738" width="260" height="46" rx="6" fill="rgba(4, 120, 87, 0.12)" stroke="#047857" stroke-width="1.4"/>
+<text x="1132" y="759" fill="#0f172a" font-size="10.5" text-anchor="middle">Open PR (Closes #task),</text>
+<text x="1132" y="772" fill="#0f172a" font-size="10.5" text-anchor="middle">request Lead review</text>
+<rect x="1320" y="738" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="1320" y="738" width="260" height="46" rx="6" fill="rgba(190, 18, 60, 0.12)" stroke="#be123c" stroke-width="1.4" stroke-dasharray="4,3"/>
+<text x="1450" y="765" fill="#0f172a" font-size="10.5" text-anchor="middle">CI runs (ci-ok)</text>
+<rect x="684" y="812" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="684" y="812" width="260" height="46" rx="6" fill="rgba(109, 40, 217, 0.12)" stroke="#6d28d9" stroke-width="1.4" stroke-dasharray="4,3"/>
+<text x="814" y="839" fill="#0f172a" font-size="10.5" text-anchor="middle">In review</text>
+<rect x="366" y="886" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="366" y="886" width="260" height="46" rx="6" fill="rgba(14, 116, 144, 0.12)" stroke="#0e7490" stroke-width="1.4"/>
+<text x="496" y="907" fill="#0f172a" font-size="10.5" text-anchor="middle">Review: diff, gates,</text>
+<text x="496" y="920" fill="#0f172a" font-size="10.5" text-anchor="middle">mutation probes</text>
+<rect x="366" y="960" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="366" y="960" width="260" height="46" rx="6" fill="rgba(14, 116, 144, 0.12)" stroke="#0f172a" stroke-width="2"/>
+<text x="496" y="981" fill="#0f172a" font-size="10.5" text-anchor="middle">Formal review:</text>
+<text x="496" y="994" fill="#0f172a" font-size="10.5" text-anchor="middle">Approve / Request changes</text>
+<rect x="1320" y="960" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="1320" y="960" width="260" height="46" rx="6" fill="rgba(190, 18, 60, 0.12)" stroke="#be123c" stroke-width="1.4" stroke-dasharray="4,3"/>
+<text x="1450" y="987" fill="#0f172a" font-size="10.5" text-anchor="middle">1/2 approvals</text>
+<rect x="366" y="1034" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="366" y="1034" width="260" height="46" rx="6" fill="rgba(14, 116, 144, 0.12)" stroke="#0e7490" stroke-width="1.4"/>
+<text x="496" y="1055" fill="#0f172a" font-size="10.5" text-anchor="middle">Request product</text>
+<text x="496" y="1068" fill="#0f172a" font-size="10.5" text-anchor="middle">owner's review</text>
+<rect x="48" y="1108" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="48" y="1108" width="260" height="46" rx="6" fill="rgba(180, 83, 9, 0.12)" stroke="#0f172a" stroke-width="2"/>
+<text x="178" y="1135" fill="#0f172a" font-size="10.5" text-anchor="middle">Review and approve</text>
+<rect x="1320" y="1182" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="1320" y="1182" width="260" height="46" rx="6" fill="rgba(190, 18, 60, 0.12)" stroke="#be123c" stroke-width="1.4" stroke-dasharray="4,3"/>
+<text x="1450" y="1209" fill="#0f172a" font-size="10.5" text-anchor="middle">2/2 approvals → mergeable</text>
+<rect x="366" y="1256" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="366" y="1256" width="260" height="46" rx="6" fill="rgba(14, 116, 144, 0.12)" stroke="#0e7490" stroke-width="1.4"/>
+<text x="496" y="1283" fill="#0f172a" font-size="10.5" text-anchor="middle">Merge (merge commit)</text>
+<rect x="684" y="1330" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="684" y="1330" width="260" height="46" rx="6" fill="rgba(109, 40, 217, 0.12)" stroke="#6d28d9" stroke-width="1.4" stroke-dasharray="4,3"/>
+<text x="814" y="1357" fill="#0f172a" font-size="10.5" text-anchor="middle">Done · task closed</text>
+<text x="28" y="1430" fill="#475569" font-size="9.5">solid = regular flow · dashed = loop back · dashed box = board or system state · bold border = decision</text>
+</svg>

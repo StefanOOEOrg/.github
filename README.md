@@ -9,5 +9,7 @@ Organization-wide community health files for `StefanOOEOrg`.
   quality gates.
 - [`profile/README.md`](profile/README.md) — the organization profile page, shown once this
   repository is public.
+- [`assets/`](assets/) — the swimlane diagrams embedded in `PROCESS.md` and `CONTRIBUTING.md`;
+  generated, not hand-edited.
 
 Changes go through a pull request, like code.
