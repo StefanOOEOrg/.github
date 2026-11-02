@@ -4,7 +4,7 @@ Open-source tools around personal AI agents, health and sports data, and local-f
 
 | Role | Account |
 |---|---|
-| Product owner | [@StefanOOE](https://github.com/StefanOOE) |
+| Product owner & architect | [@StefanOOE](https://github.com/StefanOOE) |
 | Lead (refines, reviews, merges) | `StefanOOELeadBot` |
 | Developer (implements, opens PRs) | `StefanOOEDevBot` |
 

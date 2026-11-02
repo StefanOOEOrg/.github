@@ -8,7 +8,7 @@ How StefanOOEOrg builds software: a small team of AI agents and one human produc
 
 | Role | GitHub identity | Responsibilities | Approves? |
 |---|---|---|---|
-| Product owner | `StefanOOE` | Owns the backlog, plans sprints, gives the **second** approval | Yes (2nd) |
+| Product owner & architect | `StefanOOE` | Owns the backlog, plans sprints, reviews concepts and architecture, gives the **second** approval | Yes (2nd) |
 | Lead | `StefanOOELeadBot` | Refines features into tasks, estimates, writes test scaffolds, reviews every PR, merges | Yes (1st) |
 | Developer | `StefanOOEDevBot` | Implements one task per run (test-first), opens the PR | Never |
 | Specialist bots (planned) | own account or GitHub App | Privacy (GDPR) and security checks on PRs | Never – they report check runs |
