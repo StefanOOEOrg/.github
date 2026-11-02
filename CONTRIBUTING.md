@@ -11,6 +11,8 @@ form.
 
 Changes to this document go through a pull request here, like code.
 
+How work is organised (roles, board, reviews): see [PROCESS.md](PROCESS.md).
+
 ---
 
 ## 1. Language
