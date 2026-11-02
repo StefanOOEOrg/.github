@@ -11,6 +11,8 @@ form.
 
 Changes to this document go through a pull request here, like code.
 
+How work is organised (roles, board, reviews): see [PROCESS.md](PROCESS.md).
+
 ---
 
 ## 1. Language
@@ -165,6 +167,11 @@ terms. No separate CLA document is required.
 
 External pull requests arrive as forks, their first workflow run is approved by a maintainer, and they are reviewed
 by a maintainer and merged by the repository owner (§12).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/StefanOOEOrg/.github/raw/main/assets/process-external-dark.svg">
+  <img alt="Swimlane diagram of an external contribution" src="https://github.com/StefanOOEOrg/.github/raw/main/assets/process-external-light.svg">
+</picture>
 
 ## Rollout
 
