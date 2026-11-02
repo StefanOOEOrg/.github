@@ -135,7 +135,7 @@ raised explicitly in this document — never silently dropped in CI.
   `<area>: <what> (<context>)`, with a body when the why is not obvious.
 - Pull requests reference their issue (`Closes #n` or "Part of #n") and state how the change was
   verified.
-- Merging is done by the repository owner, as a merge commit.
+- Merging is done by the Lead after the product owner's approval, as a merge commit (see [PROCESS.md](PROCESS.md)).
 - A pull request that changes behaviour ships tests that fail without it.
 
 ## 13. Frontend (Angular / TypeScript)
@@ -166,7 +166,7 @@ agreement: you confirm that you wrote the change or hold the rights to submit it
 terms. No separate CLA document is required.
 
 External pull requests arrive as forks, their first workflow run is approved by a maintainer, and they are reviewed
-by a maintainer and merged by the repository owner (§12).
+by the Lead, approved by the product owner and merged by the Lead (§12).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://github.com/StefanOOEOrg/.github/raw/main/assets/process-external-dark.svg">

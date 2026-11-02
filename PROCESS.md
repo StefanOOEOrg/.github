@@ -45,6 +45,16 @@ There are no epics. Themes spanning several repositories (e.g. a linter migratio
 | Priority | Urgent, High, Medium, Low | Product owner, Lead |
 | Topic | free text | Lead |
 | Instance | dev-1, dev-2, … | Lead (on hand-over) |
+| Assignee | exactly one: whoever acts next | assignee sync script, Lead |
+
+Assignee = whoever acts next:
+- Triage / Backlog: Lead – or the product owner while a decision of theirs is pending
+- Ready / In Progress: Developer
+- PR open, review requested from the Lead: Lead
+- Lead requested changes: Developer
+- Lead approved, product owner's review requested: product owner
+- Product owner approved: Lead (merge)
+- Closed: nobody
 
 ### Project workflows
 
@@ -74,6 +84,7 @@ Independent tasks run in parallel on different instances. Dependent tasks stay s
 
 ### Notifications
 
+- **Everyone:** the filter `assignee:@me` lists everything waiting for you.
 - **Product owner:** GitHub Mobile – review requests and `@StefanOOE` mentions.
 - **Lead:** a watcher reports new review requests, approvals ready to merge, tasks stuck *In Progress* and approved PRs without a review request to the product owner.
 - **Chat** is used only for clarifying requirements; the outcome is written into the issue.
