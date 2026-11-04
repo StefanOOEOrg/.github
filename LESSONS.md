@@ -16,6 +16,7 @@ Every process correction gets a line here (same PR as the correction, or a docs 
 | 2026-11-04 | Re-approval after a push overlooked (#78, #32) | every push dismisses approvals | github-watch reminds the product owner on the PR after 2 h (again after 24 h) | done |
 | 2026-11-03 | Merge conflict #65 vs #78 | parallel PRs on the same file | planning rule exists, not enforced | open |
 | 2026-11-03 | Features without closing task (#52, #55) | stories created before the rule | rule + #79 | done |
+| 2026-11-03 | Approvals lost to unnecessary branch updates (#62–#65, #78) | every push dismisses approvals | `upstream/main` merged into a PR branch only on `DIRTY` or an invisible change, never because the branch is behind (PROCESS.md) | done |
 | 2026-11-02 | `gh pr edit --add-reviewer` silently failed | gh 2.45 bug (Projects classic) | REST call in the skills, gh 2.103 | done |
 | 2026-11-02 | Required check blocked (mcp-garmin#21) | duplicate CI runs on one commit after a cancelled re-run | merged by the product owner | watch |
 | 2026-11-03 | Image analysis failed in the personal agents | auxiliary models without their own base_url | base_url per auxiliary task | done |
