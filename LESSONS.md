@@ -14,6 +14,7 @@ Every process correction gets a line here (same PR as the correction, or a docs 
 | 2026-11-02 | Lead pulled new work items into the sprint himself | no rule for new items during a sprint | propose in the sprint plan, product owner decides | done |
 | 2026-11-03 | PRs without `Closes #n` (Kanban) | work created outside the task flow | – | open |
 | 2026-11-04 | Re-approval after a push overlooked (#78, #32) | every push dismisses approvals | github-watch reminds the product owner on the PR after 2 h (again after 24 h) | done |
+| 2026-11-04 | Release looked red on `main` right before the tag (v1.1.0) | `uv sync` keeps the editable metadata after a `VERSION` bump, while CI installs fresh | `uv sync --reinstall-package newstrading` is part of the release steps; the version test compares against the newest changelog heading | done |
 | 2026-11-03 | Merge conflict #65 vs #78 | parallel PRs on the same file | planning rule exists, not enforced | open |
 | 2026-11-03 | Features without closing task (#52, #55) | stories created before the rule | rule + #79 | done |
 | 2026-11-02 | `gh pr edit --add-reviewer` silently failed | gh 2.45 bug (Projects classic) | REST call in the skills, gh 2.103 | done |
