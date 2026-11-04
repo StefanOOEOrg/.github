@@ -110,6 +110,16 @@ A PR can be merged only when:
 - only the files allowed by the task were changed, and tests were not weakened
 - the PR body starts with `Closes #<task>` and reports test results
 
+### Updating a PR branch
+
+Every push to a PR branch dismisses both approvals, and the ruleset does not require branches to be up to date with `main`. A branch is therefore updated only when there is a concrete reason, and there are exactly three cases:
+
+- **Conflict** – GitHub shows `mergeStateStatus: DIRTY`: resolve it with `git merge upstream/main`.
+- **Invisible change** – a file the PR touches changed on `main` in a way CI cannot see (e.g. a moved test helper): merge as well, and state the reason in a comment on the PR.
+- **Behind only** – no reason, so no push: `mergeStateStatus: BEHIND` on its own is left alone until the merge.
+
+If a push was necessary, the PR body says so in one line, so the product owner knows why the approval is gone.
+
 ## External contributions
 
 Contributions are welcome via fork and pull request.
