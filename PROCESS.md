@@ -30,7 +30,7 @@ Specialist bots never approve: the ruleset counts approvals per identity, so a s
 | Estimate | Project field *Points* (1, 2, 3, 5 – complexity only; anything larger is split) |
 | Status | Project field *Status*, mostly set by workflows |
 | Report and review | PR description and formal GitHub review |
-| Increment | Merged PRs with `Closes #task`; a feature closes when all its sub-issues are closed |
+| Increment | Merged PRs with `Closes #task`; every feature ends with its closing task *Acceptance and release vX.Y.Z* |
 | Decisions | Comments on the issue or PR |
 
 There are no epics. Themes spanning several repositories (e.g. a linter migration) get one issue per repository, grouped by the project field *Topic*.
@@ -39,16 +39,18 @@ There are no epics. Themes spanning several repositories (e.g. a linter migratio
 
 | Field | Values | Set by |
 |---|---|---|
-| Status | Triage, Backlog, Ready, In Progress, In review, Done | workflows, Lead |
-| Iteration | 2-week iterations | Product owner (sprint planning) |
+| Status | Triage, Backlog, Ready, In Progress, In review, Done | workflows; Backlog: product owner; Ready: Lead |
+| Iteration | 2-week iterations | Product owner only |
 | Points | 1, 2, 3, 5 | Lead |
 | Priority | Urgent, High, Medium, Low | Product owner, Lead |
 | Topic | free text | Lead |
 | Instance | dev-1, dev-2, … | Lead (on hand-over) |
 | Assignee | exactly one: whoever acts next | assignee sync script, Lead |
 
-Assignee = whoever acts next:
-- Triage / Backlog: Lead – or the product owner while a decision of theirs is pending
+Assignee = whoever acts next (kept up to date by a script every 10 minutes):
+- Triage, not refined yet: Lead – or the product owner while a question to them is pending
+- Triage, refined: product owner (reviews the refinement)
+- Backlog in the current iteration: Lead (sprint planning); other Backlog items: nobody
 - Ready / In Progress: Developer
 - PR open, review requested from the Lead: Lead
 - Lead requested changes: Developer
@@ -71,14 +73,15 @@ Assignee = whoever acts next:
   <img alt="Swimlane diagram of the development process" src="assets/process-internal-light.svg">
 </picture>
 
-1. **Backlog** – Ideas become issues. The Lead clarifies them with the product owner and writes acceptance criteria. Priority is the order in the backlog.
-2. **Sprint planning** – The product owner pulls tasks and bugs into the current iteration.
-3. **Refinement** – The Lead splits each feature into task sub-issues: goal, acceptance criteria, scope (allowed files, test command), steps, points and a line ``Branch: `wp/<name>` (base: `main`)``. If needed, the Lead first opens a scaffold PR with failing tests.
-4. **Hand-over** – The Lead assigns the task to `StefanOOEDevBot`, sets *Instance* and moves it to **Ready**.
-5. **Implementation** – A dispatcher picks the first Ready task per free instance, creates a dedicated worktree, sets **In Progress** and starts the developer. The developer works test-first, commits, pushes and opens the PR with `Closes #<task>` and requests the Lead's review. Status moves to **In review**.
-6. **Review (Lead)** – Quality gates (CI, coverage, lint), mutation probes against "false green" tests, a formal GitHub review. *Request changes* sends the task back to Ready for round 2. On approval the Lead requests the product owner's review.
-7. **Approval and merge** – The product owner approves; the Lead merges. The task closes and moves to **Done**.
-8. **Sprint review** – At the end of an iteration the Lead summarises the results in a *Sprint n review* issue.
+1. **Intake** – Ideas become issues (feature, task or bug) in any repository. A watcher adds every open issue to the project in **Triage**.
+2. **Refinement (Lead)** – The Lead clarifies open points with the product owner, sets type and parent, splits each feature into task sub-issues – goal, acceptance criteria, scope (allowed files, test command), steps, points and a line ``Branch: `wp/<name>` (base: `main`)`` – and adds the feature's **closing task** *Acceptance and release vX.Y.Z*. The cards stay in Triage and are assigned to the product owner. Nothing in Triage is started.
+3. **Refinement review (product owner)** – The product owner reviews the refinement and moves the cards to **Backlog** and into the current **iteration** – or comments, and the card goes back to the Lead.
+4. **Sprint planning (Lead)** – One planning run over all items of the iteration: dependencies as *blocked by*, points, a parallel plan across the developer instances (no two parallel tasks on the same files), published as a *Sprint n plan* issue. Tasks without open dependencies get the Developer, an *Instance* and **Ready**. New work found during a sprint is only proposed in the plan; the product owner decides.
+5. **Implementation** – A dispatcher starts the first Ready task of the current iteration per free instance in a dedicated worktree and sets **In Progress**. The developer works test-first, commits, pushes and opens the PR with `Closes #<task>` and requests the Lead's review. Status moves to **In review**.
+6. **Review (Lead)** – Quality gates (CI, coverage, lint), mutation probes against "false green" tests, a formal GitHub review. *Request changes* sends the task back to Ready for the next round. On approval the Lead requests the product owner's review.
+7. **Approval and merge** – The product owner approves (a reminder comes after 2 h of waiting); the Lead merges. The task closes and moves to **Done**; merged predecessors unblock the next tasks.
+8. **Acceptance and release** – The product owner's approval of the closing task's PR (changelog, version, acceptance table per requirement) is the acceptance of the feature **and** the go for the release: the Lead tags `vX.Y.Z`, publishes the GitHub release and closes the feature.
+9. **Sprint end** – On the last day of an iteration the Lead writes a *Sprint n review* and a *Sprint n retro* issue (see Continuous improvement).
 
 Independent tasks run in parallel on different instances. Dependent tasks stay sequential ("blocked by"). Two instances never work on the same branch of the same repository.
 
@@ -86,8 +89,17 @@ Independent tasks run in parallel on different instances. Dependent tasks stay s
 
 - **Everyone:** the filter `assignee:@me` lists everything waiting for you.
 - **Product owner:** GitHub Mobile – review requests and `@StefanOOE` mentions.
-- **Lead:** a watcher reports new review requests, approvals ready to merge, tasks stuck *In Progress* and approved PRs without a review request to the product owner.
+- **Product owner:** a reminder comment on a PR that has waited more than 2 h only for the product owner's approval (repeated after 24 h at the earliest).
+- **Lead:** a watcher reports new review requests, approvals ready to merge, tasks stuck *In Progress*, approved PRs without a review request to the product owner, sprint planning needed (unrefined or startable tasks of the iteration), idle instances, items longer than 2 h in Triage, PRs for Triage items, work outside the current iteration and the last day of an iteration. Open reports are repeated (20–60 min).
 - **Chat** is used only for clarifying requirements; the outcome is written into the issue.
+
+## Continuous improvement
+
+- **Incidents:** whenever something stalls or bypasses the process, an issue with topic `process` records what happened, the cause, the immediate fix and the lasting measure. The lasting measure is a task that the product owner reviews like any other.
+- **Retro per sprint:** *Sprint n retro* with figures (time from Ready to merge, waiting time for the product owner's approval, review rounds, delayed notifications), what went well and what did not, and at most three improvements as tasks.
+- **[LESSONS.md](LESSONS.md):** every process correction gets a line – date, problem, cause, measure, status.
+- **Documentation moves with the process:** every change to the process updates this document and the diagrams in the same step.
+- Plan, review and retro issues (`Sprint n …`) are documents and stay out of the project.
 
 ## Quality gates
 
