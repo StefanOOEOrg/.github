@@ -7,6 +7,7 @@ Organization-wide community health files for `StefanOOEOrg`.
   created in any repository of the organization that has no own `CONTRIBUTING.md`.
 - [`PROCESS.md`](PROCESS.md) — how the organization develops software: roles, board, workflow and
   quality gates.
+- [`LESSONS.md`](LESSONS.md) — every process correction with problem, cause, measure and status.
 - [`profile/README.md`](profile/README.md) — the organization profile page, shown once this
   repository is public.
 - [`assets/`](assets/) — the swimlane diagrams embedded in `PROCESS.md` and `CONTRIBUTING.md`;
