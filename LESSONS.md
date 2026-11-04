@@ -4,6 +4,7 @@ Every process correction gets a line here (same PR as the correction, or a docs 
 
 | Date | Problem | Cause | Measure | Status |
 |---|---|---|---|---|
+| 2026-11-04 | Local suite red after the version bump | stale editable package metadata (`uv sync` does not rebuild it from `VERSION`) | `uv sync --reinstall-package newstrading` in the release steps before the test run | done |
 | 2026-11-03 | Work started outside the process (#56/#57, PRs #62–#65) | retired Hermes Kanban still dispatched and auto-decomposed | Kanban dispatch and auto-decompose switched off; skill: no Kanban cards | done |
 | 2026-11-03 | Issues created as DevBot, Kanban cards from a second Lead session | Telegram session of the Lead without the Lead's gh identity | identity check before every gh write | done |
 | 2026-11-02 | Merge notices lost or late | bot-chat delivery fails or times out while the Lead runs long turns | watch repeats open events (20/60 min) | open: root cause |
