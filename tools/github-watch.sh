@@ -6,7 +6,7 @@
 #
 # The assignee says who acts next, so the watch reports the Lead's inbox and only what the assignee
 # cannot show. Open events repeat every hour; stdout = delivery payload, empty = silent.
-#   Inbox: review requested, ready to merge, Stefan's changes, comment or assignment, unrefined Triage
+#   Inbox: review requested, ready to merge, Stefan's changes, comment or assignment, unrefined Triage or Goal
 #   Checks: stalled Action card, Verify without PR, PR on a Triage card, PR without Closes line,
 #           issue missing from the project, merged .github PR to review afterwards, retro due
 #   Stefan: approve reminder as a comment on the PR
@@ -223,6 +223,9 @@ def card_events(node, events, now):
     age = now - datetime.fromisoformat(c["createdAt"].replace("Z", "+00:00"))
     if status == "Triage" and not is_doc(c) and not refined(c) and age > timedelta(hours=TRIAGE_HOURS):
         events[f"triage:{c['url']}"] = f"Inbox – seit über {TRIAGE_HOURS} h in Triage, verfeinern: {name}"
+    order = re.search(r"Branch:\s*`[^`]+`", c.get("body") or "") and "Allowed files:" in (c.get("body") or "")
+    if status == "Goal" and not order and (c.get("issueType") or {}).get("name") != "Feature":
+        events[f"refine:{c['url']}"] = f"Inbox – auf Goal gezogen, aber nicht verfeinert, jetzt verfeinern: {name}"
     if status == "Triage" and prs:
         events[f"triage-pr:{c['url']}"] = f"PR #{prs[0]} zu einer Triage-Karte, die nicht begonnen werden darf: {name}"
     if status == "Verify" and not prs:

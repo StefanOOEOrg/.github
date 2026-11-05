@@ -13,6 +13,7 @@ Rule (PROCESS.md, "Assignee = whoever acts next"):
     Backlog, blocks a card on Goal                   -> product owner: only he can pull it
     Goal, blocked                                    -> whoever acts next on the blocker; the product owner
                                                         if the blocker is not on the board
+    Goal, not refined (no Branch or Allowed files)   -> Lead: refines it, then it starts by itself
     Goal / Action                                    -> Developer
     open issue without status, or Done but still open -> product owner: a gap the process must not hide
     issue closed                                     -> nobody
@@ -103,6 +104,12 @@ def is_refined(issue: dict) -> bool:
     return re.search(r"Branch:\s*`[^`]+`", issue.get("body") or "") is not None
 
 
+def has_task_order(issue: dict) -> bool:
+    """True if the dispatcher can start this card: it needs the Branch and the Allowed files line."""
+    body = issue.get("body") or ""
+    return re.search(r"Branch:\s*`[^`]+`", body) is not None and "Allowed files:" in body
+
+
 def manual_assignee(item: dict) -> str | None:
     """Return the login the product owner assigned by hand, while that assignment still wins."""
     issue = item["content"]
@@ -141,6 +148,8 @@ def next_actor(item: dict) -> str | None:
         if lead == "CHANGES_REQUESTED":
             return OWNER if lead_rounds(reviews) >= ROUND_LIMIT else DEV
         return LEAD
+    if status == "Goal" and not has_task_order(issue):
+        return LEAD  # pulled before it was refined: the dispatcher cannot start it
     if status in ("Goal", "Action"):
         return DEV
     if status in ("Done", None):

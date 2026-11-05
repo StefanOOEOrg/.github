@@ -7,7 +7,7 @@ from assignee_sync import DEV, LEAD, OWNER
 REPO = "StefanOOEOrg/.github"
 
 
-def card(number, status, blocked_by=(), body="Branch: `wp/x`", manual=None, state="OPEN"):
+def card(number, status, blocked_by=(), body="Branch: `wp/x`\nAllowed files: `a`", manual=None, state="OPEN"):
     """Build one project item as the project query returns it."""
     blockers = [{"number": n, "state": "OPEN", "repository": {"nameWithOwner": REPO}} for n in blocked_by]
     events = [{"actor": {"login": OWNER}, "assignee": {"login": manual}}] if manual else []
@@ -38,7 +38,9 @@ def pr(*states):
     ("Triage", "not refined", LEAD),
     ("Triage", "Branch: `wp/x`", OWNER),
     ("Backlog", "Branch: `wp/x`", None),
-    ("Goal", "Branch: `wp/x`", DEV),
+    ("Goal", "Branch: `wp/x`\nAllowed files: `a`", DEV),
+    ("Goal", "not refined", LEAD),
+    ("Goal", "Branch: `wp/x`", LEAD),
     ("Action", "Branch: `wp/x`", DEV),
 ])
 def test_status_rules(status, body, expected):
