@@ -19,7 +19,7 @@ DIAGRAM = Diagram(
     lanes=[
         ("Product owner", "StefanOOE · backlog, pull, 2nd approval", "owner"),
         ("Lead", "StefanOOELeadBot · refine, review, merge", "lead"),
-        ("Project board", "Product Backlog · watcher · dispatcher", "board"),
+        ("Project board", "The Loop · watcher · dispatcher", "board"),
         ("Developer (dev-n)", "StefanOOEDevBot · one task per run", "dev"),
         ("GitHub", "protected main · CI · 2 approvals", "github"),
     ],

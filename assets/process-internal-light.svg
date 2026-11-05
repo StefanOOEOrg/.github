@@ -19,7 +19,7 @@
 <text x="362" y="125" fill="#475569" font-size="9">StefanOOELeadBot · refine, review, merge</text>
 <rect x="664" y="90" width="300" height="1312" rx="12" fill="rgba(109, 40, 217, 0.06)" stroke="#6d28d9" stroke-width="1" stroke-dasharray="8,4"/>
 <text x="680" y="110" fill="#6d28d9" font-size="13" font-weight="bold">Project board</text>
-<text x="680" y="125" fill="#475569" font-size="9">Product Backlog · watcher · dispatcher</text>
+<text x="680" y="125" fill="#475569" font-size="9">The Loop · watcher · dispatcher</text>
 <rect x="982" y="90" width="300" height="1312" rx="12" fill="rgba(4, 120, 87, 0.06)" stroke="#047857" stroke-width="1" stroke-dasharray="8,4"/>
 <text x="998" y="110" fill="#047857" font-size="13" font-weight="bold">Developer (dev-n)</text>
 <text x="998" y="125" fill="#475569" font-size="9">StefanOOEDevBot · one task per run</text>
