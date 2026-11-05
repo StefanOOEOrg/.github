@@ -14,6 +14,8 @@ Rule (PROCESS.md, "Assignee = whoever acts next"):
     other Backlog / no status                        -> nobody (waits for sprint planning), or the product
                                                         owner while a question of his is pending
     issue closed                                     -> nobody
+A manual assignment of the product owner wins over these rules while the item is in Triage, Backlog or
+In review - also when a PR is open (PROCESS.md, "Assignee = inbox").
 Called from github-watch.sh on every run; idempotent, only changes what differs.
 Usage: assignee_sync.py <org> <project-number> [--dry-run]
 """
@@ -114,6 +116,13 @@ def next_actor(item: dict) -> str | None:
     if issue["state"] != "OPEN":
         return None
     current = {a["login"] for a in issue["assignees"]["nodes"]}
+    status = (item.get("status") or {}).get("name")
+    # A manual assignment of the product owner wins while the item is in Triage, Backlog or In review
+    # (PROCESS.md, "Assignee = inbox") - also when a PR is open, which is what "In review" means.
+    manual = ((issue.get("timelineItems") or {}).get("nodes") or [None])[-1]
+    if (manual and (manual.get("actor") or {}).get("login") == OWNER and status in ("Triage", "Backlog", "In review", None)
+            and (manual.get("assignee") or {}).get("login") in current):
+        return manual["assignee"]["login"]  # the product owner assigned this by hand: his decision wins
     prs = [p for p in issue["closedByPullRequestsReferences"]["nodes"] if p["state"] == "OPEN"]
     if prs:
         pr = prs[0]
@@ -129,11 +138,6 @@ def next_actor(item: dict) -> str | None:
         if lead == "CHANGES_REQUESTED":
             return DEV
         return LEAD
-    status = (item.get("status") or {}).get("name")
-    manual = ((issue.get("timelineItems") or {}).get("nodes") or [None])[-1]
-    if (manual and (manual.get("actor") or {}).get("login") == OWNER and status in ("Triage", "Backlog", "In review", None)
-            and (manual.get("assignee") or {}).get("login") in current):
-        return manual["assignee"]["login"]  # the product owner assigned this by hand: his decision wins
     if status in ("Ready", "In Progress"):
         return DEV
     if status == "Done":
