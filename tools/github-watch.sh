@@ -6,7 +6,7 @@
 #
 # The assignee says who acts next, so the watch reports the Lead's inbox and only what the assignee
 # cannot show. Open events repeat every hour; stdout = delivery payload, empty = silent.
-#   Inbox: review requested, ready to merge, Stefan's changes, comment or assignment, unrefined Triage
+#   Inbox: review requested, ready to merge, Stefan's changes, comment or assignment, unrefined Triage or Goal
 #   Checks: stalled Action card, Verify without PR, PR on a Triage card, PR without Closes line,
 #           issue missing from the project, merged .github PR to review afterwards, retro due
 #   Stefan: approve reminder as a comment on the PR
@@ -29,6 +29,7 @@ from zoneinfo import ZoneInfo
 
 org, project, lead, owner, stale_h, cache = sys.argv[1:7]
 cache = Path(cache)
+DRY_RUN = os.environ.get("WATCH_DRY_RUN") == "1"  # read only: no comment, no new project item
 
 GH_TIMEOUT = 60  # seconds per gh call; a hung call must not block the cron run
 GH_ATTEMPTS = 3  # GitHub answers 502/504 on the big project query now and then; retry reads
@@ -126,6 +127,8 @@ def pr_events(prs, events):
 
 def remind_owner(prs, events):
     """Comment on a PR that waits only for the product owner's approval (#78, #32)."""
+    if DRY_RUN:
+        return
     path = cache / "approve-reminders.json"
     try:
         reminded = json.loads(path.read_text())
@@ -171,7 +174,7 @@ def add_missing(events):
                           "-f", f"q=is:issue is:open archived:false org:{org}"))["data"]["search"]["nodes"]
     missing = [i for i in found if not is_doc(i)
                and str(project) not in {str(n["project"]["number"]) for n in i["projectItems"]["nodes"]}]
-    if not missing:
+    if not missing or DRY_RUN:
         return
     fields = {f["name"]: f for f in json.loads(gh("project", "field-list", project, "--owner", org,
                                                    "--format", "json"))["fields"]}
@@ -223,6 +226,9 @@ def card_events(node, events, now):
     age = now - datetime.fromisoformat(c["createdAt"].replace("Z", "+00:00"))
     if status == "Triage" and not is_doc(c) and not refined(c) and age > timedelta(hours=TRIAGE_HOURS):
         events[f"triage:{c['url']}"] = f"Inbox – seit über {TRIAGE_HOURS} h in Triage, verfeinern: {name}"
+    order = re.search(r"Branch:\s*`[^`]+`", c.get("body") or "") and "Allowed files:" in (c.get("body") or "")
+    if status == "Goal" and not order and (c.get("issueType") or {}).get("name") != "Feature":
+        events[f"refine:{c['url']}"] = f"Inbox – auf Goal gezogen, aber nicht verfeinert, jetzt verfeinern: {name}"
     if status == "Triage" and prs:
         events[f"triage-pr:{c['url']}"] = f"PR #{prs[0]} zu einer Triage-Karte, die nicht begonnen werden darf: {name}"
     if status == "Verify" and not prs:

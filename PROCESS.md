@@ -55,6 +55,7 @@ Assignee = whoever acts next, on the card **and** on its PR (kept up to date by 
 | Backlog | Nobody: it waits to be pulled |
 | Backlog, blocks a card on Goal | Product owner (only they can pull it) |
 | Goal, blocked | Whoever acts next on the blocker; the product owner if the blocker is not on the board |
+| Goal, not refined | Lead (refines it, then it starts by itself) |
 | Goal / Action | Developer |
 | PR open, review requested from the Lead | Lead |
 | Lead requested changes | Developer; after the third round the product owner |
