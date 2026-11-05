@@ -241,7 +241,7 @@ while True:
                                              f"(Stefan gibt sie erst frei): {c['repository']['name']}#{c['number']} {c['url']}")
         # A card on In review without a PR is a board lie: nobody can review, and the card looks busy (#17, #28).
         if status == "In review" and c.get("state") == "OPEN" and not open_prs:
-            events[f"board:{c['url']}"] = (f"board: ⚠️ #{c['number']} steht auf In review ohne offenen PR: {c['url']}")
+            events[f"board:{c['url']}"] = (f"board: ⚠️ #{c['number']} steht auf In review ohne verlinkten PR: {c['url']}")
         task_refined = re.search(r"Branch:\s*`[^`]+`", c.get("body") or "") is not None
         feature_split = (c.get("issueType") or {}).get("name") == "Feature" and (c.get("subIssues") or {}).get("totalCount", 0) > 0
         # refined triage items wait for Stefan's review (assigned to him by assignee_sync), not for the Lead
