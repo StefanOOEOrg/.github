@@ -92,7 +92,7 @@ Independent tasks run in parallel on different instances. Dependent tasks stay s
 - **Everyone:** the filter `assignee:@me` lists everything waiting for you.
 - **Product owner:** GitHub Mobile – review requests and `@StefanOOE` mentions.
 - **Product owner:** a reminder comment on a PR that has waited more than 2 h only for the product owner's approval (repeated after 24 h at the earliest).
-- **Lead:** a watcher reports new review requests, inbox items (comments and manual assignments of the product owner), approvals ready to merge, tasks stuck *In Progress*, approved PRs without a review request to the product owner, sprint planning needed (unrefined or startable tasks of the iteration), idle instances, items longer than 2 h in Triage, PRs for Triage items, work outside the current iteration and the last day of an iteration. Open reports are repeated (20–60 min).
+- **Lead:** a watcher reports new review requests, inbox items (comments and manual assignments of the product owner) (planned in #15), approvals ready to merge, tasks stuck *In Progress*, approved PRs without a review request to the product owner, sprint planning needed (unrefined or startable tasks of the iteration), idle instances, items longer than 2 h in Triage, PRs for Triage items, work outside the current iteration and the last day of an iteration. Open reports are repeated (20–60 min).
 - **Chat** is used only for clarifying requirements; the outcome is written into the issue.
 
 ## Continuous improvement
