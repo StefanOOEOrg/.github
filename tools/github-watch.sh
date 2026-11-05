@@ -165,13 +165,49 @@ SPRINT_QUERY = """query($org: String!, $num: Int!, $after: String) { organizatio
     status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
     instance: fieldValueByName(name: "Instance") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
     iteration: fieldValueByName(name: "Iteration") { ... on ProjectV2ItemFieldIterationValue { title startDate duration } }
-    content { ... on Issue { url number title state body createdAt repository { name } issueType { name } subIssues(first: 1) { totalCount } issueDependenciesSummary { blockedBy }
+    content { ... on Issue { url number title state body createdAt repository { name nameWithOwner } issueType { name } subIssues(first: 1) { totalCount } issueDependenciesSummary { blockedBy }
       assignees(first: 5) { nodes { login } } comments(last: 1) { nodes { id createdAt author { login } } }
       timelineItems(last: 1, itemTypes: [ASSIGNED_EVENT]) { nodes { ... on AssignedEvent { id createdAt actor { login } assignee { ... on User { login } } } } }
       closedByPullRequestsReferences(first: 3, includeClosedPrs: false) { nodes { number state } } } } } } } } }"""
 # WATCH_TODAY=YYYY-MM-DD simulates a date for tests; otherwise today in Vienna (iterations are calendar days there)
 today = (datetime.fromisoformat(os.environ["WATCH_TODAY"]).date() if os.environ.get("WATCH_TODAY")
          else datetime.now(ZoneInfo("Europe/Vienna")).date())
+
+# A task of the running iteration can hang on a blocker that is not in it: the blocker sits in Backlog without
+# an interval, appears in nobody's list and the sprint stands still while the watch reports nothing (#24, #28).
+BLOCKER_QUERY = """query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) {
+  issue(number: $number) { blockedBy(first: 50) { nodes { number state
+    projectItems(first: 20) { nodes { project { number }
+      iteration: fieldValueByName(name: "Iteration") { ... on ProjectV2ItemFieldIterationValue { startDate duration } } } }
+  } } } } }"""
+
+
+def in_running_iteration(blocker: dict) -> bool:
+    """True if the blocker card carries an iteration of this project that is running today."""
+    for item in ((blocker.get("projectItems") or {}).get("nodes") or []):
+        if str((item.get("project") or {}).get("number")) != str(project):
+            continue
+        it = item.get("iteration")
+        if not it:
+            return False
+        start = datetime.fromisoformat(it["startDate"]).date()
+        return start <= today < start + timedelta(days=it["duration"])
+    return False  # not on this board at all: nobody planned the blocker into a sprint
+
+
+def blockers_outside_iteration(number: int, name_with_owner: str) -> list[int]:
+    """Numbers of the open blockers of one issue that are not in the project's running iteration.
+
+    Closed blockers are skipped: they no longer hold anything back, and asking the Lead to pull a
+    finished task into the sprint would be noise.
+    """
+    owner, name = name_with_owner.split("/", 1)
+    data = json.loads(gh("api", "graphql", "-f", f"query={BLOCKER_QUERY}", "-f", f"owner={owner}",
+                         "-f", f"name={name}", "-F", f"number={number}"))
+    nodes = ((data["data"]["repository"]["issue"] or {}).get("blockedBy") or {}).get("nodes") or []
+    return [b["number"] for b in nodes if b["state"] == "OPEN" and not in_running_iteration(b)]
+
+
 after = None
 sprint_end = {}  # iteration title -> open items on its last day
 TRIAGE_HOURS = 2  # items the project workflow parked in Triage longer than this need the Lead
@@ -198,11 +234,14 @@ while True:
                          and last_comment["createdAt"] > assigned["createdAt"])):
             events[f"owner-assigned:{assigned['id']}"] = (f"Inbox – Stefan hat dir das zugewiesen: "
                                                           f"{c['repository']['name']}#{c['number']} {c['title'][:70]} {c['url']}")
-        triage_prs = [pr["number"] for pr in ((c.get("closedByPullRequestsReferences") or {}).get("nodes") or [])
-                      if pr["state"] == "OPEN"]
-        if status == "Triage" and c.get("state") == "OPEN" and triage_prs:
-            events[f"triage-pr:{c['url']}"] = (f"PR #{triage_prs[0]} zu einem Triage-Item – Triage-Karten werden nicht begonnen "
+        open_prs = [pr["number"] for pr in ((c.get("closedByPullRequestsReferences") or {}).get("nodes") or [])
+                    if pr["state"] == "OPEN"]
+        if status == "Triage" and c.get("state") == "OPEN" and open_prs:
+            events[f"triage-pr:{c['url']}"] = (f"PR #{open_prs[0]} zu einem Triage-Item – Triage-Karten werden nicht begonnen "
                                              f"(Stefan gibt sie erst frei): {c['repository']['name']}#{c['number']} {c['url']}")
+        # A card on In review without a PR is a board lie: nobody can review, and the card looks busy (#17, #28).
+        if status == "In review" and c.get("state") == "OPEN" and not open_prs:
+            events[f"board:{c['url']}"] = (f"board: ⚠️ #{c['number']} steht auf In review ohne offenen PR: {c['url']}")
         task_refined = re.search(r"Branch:\s*`[^`]+`", c.get("body") or "") is not None
         feature_split = (c.get("issueType") or {}).get("name") == "Feature" and (c.get("subIssues") or {}).get("totalCount", 0) > 0
         # refined triage items wait for Stefan's review (assigned to him by assignee_sync), not for the Lead
@@ -225,6 +264,14 @@ while True:
                 open_items.append(f"{c['repository']['name']}#{c['number']} {c['title'][:50]} ({status or '-'})")
         if c.get("state") != "OPEN":
             continue
+        # A task of the running iteration can hang on a blocker outside it. Such a blocker appears in no
+        # sprint list, so the sprint stands still and the watch reports nothing to do (#24, #28).
+        if (start <= today < end and (c.get("issueDependenciesSummary") or {}).get("blockedBy")
+                and (c.get("repository") or {}).get("nameWithOwner")):
+            for blocker in blockers_outside_iteration(c["number"], c["repository"]["nameWithOwner"]):
+                events[f"plan:{c['url']}:{blocker}"] = (
+                    f"plan: ⛔ #{c['number']} hängt an #{blocker}, das nicht in der Iteration ist — "
+                    f"in den Sprint ziehen oder entblocken: {c['url']}")
         # refined = has the task order's Branch line; refined but blocked tasks wait in Backlog on purpose
         refined = re.search(r"Branch:\s*`[^`]+`", c.get("body") or "") is not None
         startable = (refined and status == "Backlog" and (c.get("issueType") or {}).get("name") != "Feature"
