@@ -4,6 +4,9 @@ Every process correction gets a line here (same PR as the correction, or a docs 
 
 | Date | Problem | Cause | Measure | Status |
 |---|---|---|---|---|
+| 2026-11-05 | Reviews started from the Lead's long session, with the same context every time (#31) | no artifact between the PR and the review; every round read everything again | `tools/review-pack.py` prints task, why, out of scope, CI, earlier findings, round, scope drift and matching lessons from the API; the Lead reviews it in a fresh read-only checker session | done |
+| 2026-11-05 | The product owner reviewed PRs without a guide | the PR text described the change, not where the risk is | org PR template asks for the *Reviewer guide* – what and why, design decisions, risky spots, where to start; the developer fills it in | done |
+| 2026-11-05 | Text from issues and PRs could steer the agent that reviews it | instructions and data arrive in one context, and nothing filtered the text | review pack fences issue/PR text, strips HTML comments and invisible Unicode and caps the length; the skills get an *Untrusted input* section (Lead, after the merge) | open: skills |
 | 2026-11-05 | `tools/install.sh` reported six `copied` for an install into a nested path nobody reads (#29) | default profiles root derived from `HERMES_HOME`, which is the profile directory inside the agent runtime | default is `$HERMES_HOME/profiles` or `~/.hermes/profiles`; a profile-shaped `HERMES_HOME` is refused with a hint to `--profiles-root` | done |
 | 2026-11-05 | Sprint stalled: a decision in a comment did not reach the Lead (#24) | github-watch read states, not comments | Assignee = inbox: comments and manual assignments of the product owner are reported; manual assignment wins over the sync | done |
 | 2026-11-05 | Sprint stalled: task blocked by a task outside the iteration (#24) | blocker in Backlog without iteration or assignee | – | open |
