@@ -22,7 +22,7 @@ Specialist bots never approve: the ruleset counts approvals per identity, so a s
 
 | Artifact | Lives in |
 |---|---|
-| Product backlog | Org project **Product Backlog**, ordered by priority |
+| Backlog | Org project **The Loop**, ordered by priority |
 | Feature (user story) | Issue of type **Feature** – goal, acceptance criteria, out of scope. Parent only, never started |
 | Task / Bug | Sub-issue of type **Task** or **Bug** – one developer run, one PR. The only cards that start. Small tasks and bugs may have no parent |
 | Steps | Checkboxes inside a task |
