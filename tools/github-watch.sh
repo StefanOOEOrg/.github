@@ -78,15 +78,15 @@ for pr in prs["data"]["search"]["nodes"]:
 
 
 def has_closing_line(body: str) -> bool:
-    """True if the PR body carries a GitHub closing keyword line (`Closes|Fixes|Resolves #<n>`)."""
-    return re.search(r"^\s*(?:closes|fixes|resolves)\s+#\d+", body or "", re.I | re.M) is not None
+    """True if the PR body carries a GitHub closing keyword (`close|fix|resolve` + `#<n>`, anywhere)."""
+    return re.search(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*#\d+", body or "", re.I) is not None
 
 
 # Every PR closes its task (PROCESS.md quality gates: the body starts with `Closes #<task>`). Without that line
 # neither the assignee sync nor the dispatcher can relate a PR to a task (#16), so each such PR is reported once.
 for pr in prs["data"]["search"]["nodes"]:
     if not has_closing_line(pr.get("body")):
-        events[f"orphan:{pr['url']}"] = (f"pr: ⚠️ ohne Closes #<task>: "
+        events[f"orphan:{pr['url']}"] = (f"pr: ⚠️ ohne Closes-Zeile: "
                                          f"{pr['repository']['name']}#{pr['number']} {pr['url']}")
 
 # Approve reminder (Stefan, 2026-11-04): a PR that waits only for the product owner's approval for more than
