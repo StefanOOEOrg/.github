@@ -64,7 +64,7 @@ for pr in json.loads(gh("search", "prs", "--owner", org, "--state", "open", "--r
 
 # Lead approved but forgot `gh pr edit --add-reviewer StefanOOE`: Stefan gets no request and the PR stalls.
 PR_QUERY = """query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on PullRequest {
-  url number repository { name }
+  url number body repository { name }
   reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } } } }
   reviews(last: 100) { nodes { author { login } state } } } } } }"""
 prs = json.loads(gh("api", "graphql", "-f", f"query={PR_QUERY}", "-f", f"q=is:pr is:open org:{org}"))
@@ -75,6 +75,19 @@ for pr in prs["data"]["search"]["nodes"]:
     if lead_states and lead_states[-1] == "APPROVED" and owner not in requested and owner not in reviews:
         events[f"ask-owner:{pr['url']}"] = (f"Lead hat approved, Stefan nicht angefragt: "
                                             f"{pr['repository']['name']}#{pr['number']} {pr['url']}")
+
+
+def has_closing_line(body: str) -> bool:
+    """True if the PR body carries a GitHub closing keyword (`close|fix|resolve` + `#<n>`, anywhere)."""
+    return re.search(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*#\d+", body or "", re.I) is not None
+
+
+# Every PR closes its task (PROCESS.md quality gates: the body starts with `Closes #<task>`). Without that line
+# neither the assignee sync nor the dispatcher can relate a PR to a task (#16), so each such PR is reported once.
+for pr in prs["data"]["search"]["nodes"]:
+    if not has_closing_line(pr.get("body")):
+        events[f"orphan:{pr['url']}"] = (f"pr: ⚠️ ohne Closes-Zeile: "
+                                         f"{pr['repository']['name']}#{pr['number']} {pr['url']}")
 
 # Approve reminder (Stefan, 2026-11-04): a PR that waits only for the product owner's approval for more than
 # OWNER_WAIT_HOURS gets one @StefanOOE comment per head commit, repeated at most every OWNER_REPEAT_HOURS.
@@ -276,6 +289,13 @@ def is_due(key: str, last: str | None) -> bool:
 state, planning = {}, []
 for k, msg in events.items():
     last = prev.get(k)
+    if k.startswith("orphan:"):
+        # Once per PR and no reminder: the key lives as long as the body lacks the line and disappears with it
+        # (state is rebuilt from `events` every run), so an edited body silences the next run (#16).
+        state[k] = last or now.isoformat()
+        if last is None:
+            print(msg)
+        continue
     due = is_due(k, last)
     state[k] = now.isoformat() if due else last
     if not due:
