@@ -152,6 +152,8 @@ def next_actor(item: dict) -> str | None:
         return LEAD  # pulled before it was refined: the dispatcher cannot start it
     if status in ("Goal", "Action"):
         return DEV
+    if status == "Verify":
+        return LEAD  # Verify without a PR: the board is wrong, the watch reports it
     if status in ("Done", None):
         return OWNER  # open but outside the flow: a gap nobody would see otherwise
     refined = is_refined(issue)

@@ -29,6 +29,7 @@ from zoneinfo import ZoneInfo
 
 org, project, lead, owner, stale_h, cache = sys.argv[1:7]
 cache = Path(cache)
+DRY_RUN = os.environ.get("WATCH_DRY_RUN") == "1"  # read only: no comment, no new project item
 
 GH_TIMEOUT = 60  # seconds per gh call; a hung call must not block the cron run
 GH_ATTEMPTS = 3  # GitHub answers 502/504 on the big project query now and then; retry reads
@@ -126,6 +127,8 @@ def pr_events(prs, events):
 
 def remind_owner(prs, events):
     """Comment on a PR that waits only for the product owner's approval (#78, #32)."""
+    if DRY_RUN:
+        return
     path = cache / "approve-reminders.json"
     try:
         reminded = json.loads(path.read_text())
@@ -171,7 +174,7 @@ def add_missing(events):
                           "-f", f"q=is:issue is:open archived:false org:{org}"))["data"]["search"]["nodes"]
     missing = [i for i in found if not is_doc(i)
                and str(project) not in {str(n["project"]["number"]) for n in i["projectItems"]["nodes"]}]
-    if not missing:
+    if not missing or DRY_RUN:
         return
     fields = {f["name"]: f for f in json.loads(gh("project", "field-list", project, "--owner", org,
                                                    "--format", "json"))["fields"]}
