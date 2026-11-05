@@ -9,7 +9,7 @@ How StefanOOEOrg builds software: a small team of AI agents and one human produc
 | Role | GitHub identity | Responsibilities | Approves? |
 |---|---|---|---|
 | Product owner & architect | `StefanOOE` | Owns the backlog, pulls cards onto Goal, reviews concepts and architecture, gives the **second** approval | Yes (2nd) |
-| Lead | `StefanOOELeadBot` | Refines features into tasks, estimates, writes test scaffolds, reviews every PR, merges | Yes (1st) |
+| Lead | `StefanOOELeadBot` | Refines features into tasks, writes test scaffolds, reviews every PR, merges | Yes (1st) |
 | Developer | `StefanOOEDevBot` | Implements one task per run (test-first), opens the PR | Never |
 | Specialist bots (planned) | own account or GitHub App | Privacy (GDPR) and security checks on PRs | Never – they report check runs |
 | External contributors | own account, fork | Issues and fork PRs | Never counted |
@@ -24,9 +24,8 @@ Specialist bots never approve: the ruleset counts approvals per identity, so a s
 |---|---|
 | Backlog | Org project **The Loop**, ordered by priority |
 | Feature (user story) | Issue of type **Feature** – goal, acceptance criteria, out of scope. Parent only, never started |
-| Task / Bug | Sub-issue of type **Task** or **Bug** – one developer run, one PR. The only cards that start. Small tasks and bugs may have no parent |
+| Task / Bug | Sub-issue of type **Task** or **Bug** – what one developer run delivers in one reviewable PR; anything larger is split. The only cards that start. Small tasks and bugs may have no parent |
 | Steps | Checkboxes inside a task |
-| Estimate | Project field *Points* (1, 2, 3, 5 – complexity only; anything larger is split) |
 | Status | Project field *Status*, mostly set by workflows |
 | Report and review | PR description and formal GitHub review |
 | Increment | Merged PRs with `Closes #task`; every feature ends with its closing task *Acceptance and release vX.Y.Z* |
@@ -43,7 +42,6 @@ The automation that drives this process – `github-watch.sh`, `dev-dispatch.sh`
 | Field | Values | Set by |
 |---|---|---|
 | Status | Triage, Backlog, Goal, Action, Verify, Done | workflows; Backlog and Goal: product owner; Action: dispatcher |
-| Points | 1, 2, 3, 5 | Lead |
 | Priority | Urgent, High, Medium, Low | Product owner, Lead |
 | Topic | free text | Lead |
 | Instance | dev-1, dev-2, … | Dispatcher |
@@ -84,7 +82,7 @@ Assignee = whoever acts next, on the card **and** on its PR (kept up to date by 
 </picture>
 
 1. **Intake** – Ideas become issues (feature, task or bug) in any repository. A watcher adds every open issue to the project in **Triage**.
-2. **Refinement (Lead)** – The Lead clarifies open points with the product owner, sets type and parent, splits each feature into task sub-issues – goal, acceptance criteria, scope (allowed files, test command), steps, points, dependencies as *blocked by* and a line ``Branch: `wp/<name>` (base: `main`)`` – and adds the feature's **closing task** *Acceptance and release vX.Y.Z*. The cards stay in Triage and are assigned to the product owner. Nothing in Triage is started. The parts of an approved card that the Lead splits inherit its status; if the scope changes, they go through Triage to the product owner.
+2. **Refinement (Lead)** – The Lead clarifies open points with the product owner, sets type and parent, splits each feature into task sub-issues – goal, acceptance criteria, scope (allowed files, test command), steps, dependencies as *blocked by* and a line ``Branch: `wp/<name>` (base: `main`)`` – and adds the feature's **closing task** *Acceptance and release vX.Y.Z*. The cards stay in Triage and are assigned to the product owner. Nothing in Triage is started. The parts of an approved card that the Lead splits inherit its status; if the scope changes, they go through Triage to the product owner.
 3. **Refinement review (product owner)** – The product owner reviews the refinement and moves the cards to **Backlog** – or comments, and the card goes back to the Lead.
 4. **Pull (product owner)** – A card moved onto **Goal** is released. Its acceptance criteria are the goal and its termination condition; the order in the column is the priority. What is pulled decides the review load: the developer instances cap the running work, the product owner caps what they have to review.
 5. **Action** – A dispatcher starts the first startable Goal card per free instance in a dedicated worktree: it sets instance, Developer and **Action**. A card with an open blocker stays on Goal and gets a comment with the reason, and the assignee moves to whoever acts next on the blocker. Files that overlap a running card wait for their turn. The developer works test-first, commits, pushes and opens the PR with `Closes #<task>` and requests the Lead's review. Status moves to **Verify**.
