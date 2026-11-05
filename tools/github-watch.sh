@@ -7,6 +7,7 @@
 # Reports only NEW events (state file), stdout = delivery payload, empty = silent:
 #   - PR waiting for the Lead's review (review requested from StefanOOELeadBot)
 #   - PR approved by Stefan and not merged yet  -> Lead merges
+#   - Stefan requested changes on a PR (once per review id, reminder after 2 h and 24 h)
 #   - task "In Progress" for longer than STALE_HOURS without a linked PR -> dev run probably died
 # The snapshot file always carries the full current state (read it before answering "status?").
 set -euo pipefail
@@ -81,10 +82,10 @@ for pr in prs["data"]["search"]["nodes"]:
 # requested. Re-approvals after a push are easy to miss otherwise (#78, #32).
 OWNER_WAIT_HOURS, OWNER_REPEAT_HOURS = 2, 24
 WAIT_QUERY = """query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on PullRequest {
-  url number headRefOid repository { nameWithOwner }
+  url number title headRefOid repository { name nameWithOwner }
   commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
   reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } } } }
-  reviews(last: 50) { nodes { author { login } state submittedAt commit { oid } } } } } } }"""
+  reviews(last: 50) { nodes { id author { login } state body submittedAt commit { oid } } } } } } }"""
 remind_p = cache / "approve-reminders.json"
 try:
     reminded = json.loads(remind_p.read_text())
@@ -287,6 +288,37 @@ if planning:
     unrefined = [m.split("noch nicht verfeinert: ", 1)[-1] for k, m in events.items() if k.startswith("sprint:")]
     print(f"Sprint-Planning nötig: {len(unrefined)} Tasks der aktuellen Iteration brauchen dich (verfeinern bzw. Ready setzen). "
           "Alle in EINEM Lauf planen (Abschnitt 5, Sprint-Planning):\n- " + "\n- ".join(unrefined))
+# Stefan's "changes requested" (Sprint 1 retro): the PR's review decision is not enough - it also covers a
+# dismissed or stale state, so only his latest review counts. One report per review id; a review that no longer
+# sits on the head commit is answered (the Lead pushed) and gets no reminder. An APPROVED writes no key, which
+# clears the remembered id.
+CHANGES_WAIT_HOURS, CHANGES_REPEAT_HOURS = 2, 24
+for pr in waiting["data"]["search"]["nodes"]:
+    own = [r for r in pr["reviews"]["nodes"] if (r["author"] or {}).get("login") == owner]
+    if not own or own[-1]["state"] != "CHANGES_REQUESTED":
+        continue
+    review = own[-1]
+    key = f"changes_requested:{pr['url']}"
+    marked = prev.get(f"{key}:reminded") or {}
+    if isinstance(marked, str):  # a bare timestamp is enough for the first reminder
+        marked = {"at": marked}
+    sent = int(marked.get("reminders", 0))
+    at = datetime.fromisoformat(marked["at"]) if marked.get("at") else now
+    line = (f"review: 📝 Stefan hat Änderungen verlangt: {pr['repository']['name']}#{pr['number']} "
+            f"— {pr['title'][:80]} {pr['url']}")
+    first = next((ln.strip() for ln in (review.get("body") or "").splitlines() if ln.strip()), "")
+    if first:
+        line += f"\n  {first[:200]}"
+    if prev.get(key) != review["id"]:  # a new review id is a new event
+        print(line)
+        sent, at = 0, now
+    elif ((review.get("commit") or {}).get("oid") == pr["headRefOid"]
+          and now - at >= timedelta(hours=CHANGES_REPEAT_HOURS if sent else CHANGES_WAIT_HOURS)):
+        print(f"Erinnerung: {line}")
+        sent += 1
+        at = now
+    state[key] = review["id"]
+    state[f"{key}:reminded"] = {"at": at.isoformat(), "reminders": sent}
 state_p.write_text(json.dumps(state, sort_keys=True))
 PY
 
