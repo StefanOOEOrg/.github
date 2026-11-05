@@ -15,7 +15,7 @@ Every process correction gets a line here (same PR as the correction, or a docs 
 | 2026-11-03 | Ready task without instance never started | dispatcher needs an instance | – | open |
 | 2026-11-03 | Status not moved after refinement | Lead only commented 'in Backlog' | assignee sync + review by the product owner | done |
 | 2026-11-02 | Lead pulled new work items into the sprint himself | no rule for new items during a sprint | propose in the sprint plan, product owner decides | done |
-| 2026-11-03 | PRs without `Closes #n` (Kanban) | work created outside the task flow | – | open |
+| 2026-11-03 | PRs #62–#65 only `Part of #52` | nothing checked the rule | github-watch warns once per open PR without a `Closes #<task>` line | done |
 | 2026-11-04 | Re-approval after a push overlooked (#78, #32) | every push dismisses approvals | github-watch reminds the product owner on the PR after 2 h (again after 24 h) | done |
 | 2026-11-03 | Merge conflict #65 vs #78 | parallel PRs on the same file | planning rule exists, not enforced | open |
 | 2026-11-03 | Features without closing task (#52, #55) | stories created before the rule | rule + #79 | done |
