@@ -34,8 +34,9 @@ each copy afterwards. It is idempotent: files that are already identical are rep
 `unchanged` and not rewritten, so a second run leaves the same bytes and prints the same target
 directory.
 
-Environment: `HERMES_PROFILES_ROOT` overrides the profiles root, `HERMES_HOME` overrides
-`~/.hermes`.
+Environment: `HERMES_PROFILES_ROOT` overrides the profiles root; otherwise the default is
+`$HERMES_HOME/profiles` and, without `HERMES_HOME`, `~/.hermes/profiles` — a `HERMES_HOME` that points
+at a profile directory (`…/profiles/<name>`) is refused, so pass `--profiles-root` there.
 
 ## Working on these scripts
 
