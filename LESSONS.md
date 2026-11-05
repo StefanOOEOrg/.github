@@ -4,6 +4,7 @@ Every process correction gets a line here (same PR as the correction, or a docs 
 
 | Date | Problem | Cause | Measure | Status |
 |---|---|---|---|---|
+| 2026-11-05 | `tools/install.sh` reported six `copied` for an install into a nested path nobody reads (#29) | default profiles root derived from `HERMES_HOME`, which is the profile directory inside the agent runtime | default is `$HERMES_HOME/profiles` or `~/.hermes/profiles`; a profile-shaped `HERMES_HOME` is refused with a hint to `--profiles-root` | done |
 | 2026-11-05 | Sprint stalled: a decision in a comment did not reach the Lead (#24) | github-watch read states, not comments | Assignee = inbox: comments and manual assignments of the product owner are reported; manual assignment wins over the sync | open (#15) |
 | 2026-11-05 | Sprint stalled: task blocked by a task outside the iteration (#24) | blocker in Backlog without iteration or assignee | – | open |
 | 2026-11-04 | Local suite red after the version bump | stale editable package metadata (`uv sync` does not rebuild it from `VERSION`) | `uv sync --reinstall-package newstrading` in the release steps before the test run | done |

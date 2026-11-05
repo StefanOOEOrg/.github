@@ -12,8 +12,11 @@
 #   tools/install.sh [--profile <name>] [--profiles-root <dir>] [--dry-run]
 #   tools/install.sh <name>                # shorthand for --profile <name>
 #
-# Defaults: profile sw-lead, profiles root $HERMES_HOME/profiles (HERMES_HOME defaults to
-# ~/.hermes). Exit codes: 0 ok, 1 source or target problem, 2 usage.
+# Defaults: profile sw-lead; profiles root $HERMES_PROFILES_ROOT, else $HERMES_HOME/profiles, else
+# ~/.hermes/profiles. A HERMES_HOME that points at a profile directory (…/profiles/<name>) is
+# refused: inside the agent runtime HERMES_HOME is the profile, so the derived path would be nested
+# and nothing would install where the cron jobs read. Pass --profiles-root or unset HERMES_HOME.
+# Exit codes: 0 ok, 1 source or target problem, 2 usage.
 set -euo pipefail
 
 FILES=(
@@ -26,7 +29,8 @@ FILES=(
 )
 
 profile="sw-lead"
-profiles_root="${HERMES_PROFILES_ROOT:-${HERMES_HOME:-$HOME/.hermes}/profiles}"
+profiles_root="${HERMES_PROFILES_ROOT:-}"
+profiles_root_set=0
 dry_run=0
 profile_set=0
 
@@ -45,6 +49,7 @@ while [[ $# -gt 0 ]]; do
     --profiles-root)
       [[ $# -ge 2 ]] || { echo "install.sh: --profiles-root needs a value" >&2; exit 2; }
       profiles_root="$2"
+      profiles_root_set=1
       shift 2
       ;;
     --dry-run)
@@ -74,6 +79,19 @@ done
 if [[ -z "$profile" || "$profile" == */* ]]; then
   echo "install.sh: invalid profile name '${profile}'" >&2
   exit 2
+fi
+
+# Resolve the profiles root only when neither --profiles-root nor HERMES_PROFILES_ROOT said it.
+if [[ "$profiles_root_set" -eq 0 && -z "${HERMES_PROFILES_ROOT:-}" ]]; then
+  hermes_home="${HERMES_HOME:-}"
+  while [[ "$hermes_home" == */ ]]; do
+    hermes_home="${hermes_home%/}"
+  done
+  if [[ -n "$hermes_home" && "$(basename "$(dirname "$hermes_home")")" == "profiles" ]]; then
+    echo "HERMES_HOME looks like a profile (${hermes_home}); pass --profiles-root or unset HERMES_HOME" >&2
+    exit 2
+  fi
+  profiles_root="${hermes_home:-$HOME/.hermes}/profiles"
 fi
 
 src_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
