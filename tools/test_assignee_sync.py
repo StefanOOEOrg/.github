@@ -2,9 +2,8 @@
 
 from datetime import date, timedelta
 
-import pytest
-
 import assignee_sync as sync
+import pytest
 from assignee_sync import DEV, LEAD, OWNER
 
 REPO = "StefanOOEOrg/.github"
