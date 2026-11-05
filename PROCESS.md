@@ -97,7 +97,7 @@ Independent tasks run in parallel on different instances. Dependent tasks stay s
 
 ### The outer loop: this repository
 
-The process is not changed through the process. `.github` is the outer loop: the product owner and Claude maintain it directly – no board, no dispatcher, no Lead planning. Every change is a PR with history and updates this document, the diagrams and `LESSONS.md` in the same step. The product owner approves and merges as admin, the crons pause during the rollout, and the Lead reviews after the merge; a finding becomes a new PR. Incidents stay issues. Product repositories stay on the board.
+The process is not changed through the process. `.github` is the outer loop: the product owner and Claude maintain it directly – no board, no dispatcher, no Lead planning. Every change is a PR with history and updates this document, the diagrams and `LESSONS.md` in the same step. The product owner approves and merges as admin, the crons pause during the rollout, and the Lead reviews after the merge; a finding becomes a new PR. Process problems are issues in this repository, assigned to the product owner and kept off the board. Product repositories stay on the board.
 
 ### Review context
 
