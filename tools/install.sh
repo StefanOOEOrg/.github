@@ -22,6 +22,7 @@ FILES=(
   assignee_sync.py
   gen-prozess-diagramm.py
   gen-beitrag-diagramm.py
+  swimlane_svg.py
 )
 
 profile="sw-lead"
