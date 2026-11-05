@@ -42,7 +42,6 @@ The automation that drives this process – `github-watch.sh`, `dev-dispatch.sh`
 | Field | Values | Set by |
 |---|---|---|
 | Status | Triage, Backlog, Goal, Action, Verify, Done | workflows; Backlog and Goal: product owner; Action: dispatcher |
-| Priority | Urgent, High, Medium, Low | Product owner, Lead |
 | Topic | free text | Lead |
 | Instance | dev-1, dev-2, … | Dispatcher |
 | Assignee | exactly one: whoever acts next | assignee sync script, Lead |
