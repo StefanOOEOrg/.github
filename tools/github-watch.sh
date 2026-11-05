@@ -121,7 +121,7 @@ def pr_events(prs, events):
             events[f"changes:{own['id']}"] = f"Inbox – Stefan will Änderungen: {name}\n  {first[:200]}".rstrip()
         if by_lead and by_lead["state"] == "APPROVED" and owner not in requested and not own:
             events[f"ask-owner:{pr['url']}"] = f"Inbox – Lead hat approved, Stefan anfragen: {name}"
-        if not has_closing_line(pr.get("body")):
+        if not has_closing_line(pr.get("body")) and pr["repository"]["name"] != OUTER_LOOP_REPO:
             events[f"orphan:{pr['url']}"] = f"pr: ⚠️ ohne Closes-Zeile: {slug(pr)} {pr['url']}"
 
 

@@ -130,7 +130,7 @@ A PR can be merged only when:
 - CI is green (tests, coverage, lint, the aggregate `ci-ok` check)
 - the Lead **and** the product owner have approved (org ruleset, 2 approvals, stale approvals dismissed on push)
 - only the files allowed by the task were changed, and tests were not weakened
-- the PR body starts with `Closes #<task>` and reports test results
+- the PR body starts with `Closes #<task>` and reports test results (not in the outer loop, which has no tasks)
 
 ### Updating a PR branch
 
