@@ -44,23 +44,30 @@ The automation that drives this process – `github-watch.sh`, `dev-dispatch.sh`
 | Field | Values | Set by |
 |---|---|---|
 | Status | Triage, Backlog, Ready, In Progress, In review, Done | workflows; Backlog: product owner; Ready: Lead |
-| Iteration | 2-week iterations | Product owner only |
+| Iteration | 2-week iterations | Product owner only; the parts of a split inherit it |
 | Points | 1, 2, 3, 5 | Lead |
 | Priority | Urgent, High, Medium, Low | Product owner, Lead |
 | Topic | free text | Lead |
 | Instance | dev-1, dev-2, … | Lead (on hand-over) |
 | Assignee | exactly one: whoever acts next | assignee sync script, Lead |
 
-Assignee = whoever acts next (kept up to date by a script every 10 minutes):
-- Triage, not refined yet: Lead – or the product owner while a question to them is pending
-- Triage, refined: product owner (reviews the refinement)
-- Backlog in the current iteration: Lead (sprint planning); other Backlog items: nobody
-- Ready / In Progress: Developer
-- PR open, review requested from the Lead: Lead
-- Lead requested changes: Developer
-- Lead approved, product owner's review requested: product owner
-- Product owner approved: Lead (merge)
-- Closed: nobody
+Assignee = whoever acts next, on the card **and** on its PR (kept up to date by a script every 10 minutes):
+
+| State | Assignee |
+|---|---|
+| Triage, not refined | Lead – or the product owner while a question to them is pending |
+| Triage, refined | Product owner (reviews the refinement) |
+| Backlog in the current iteration, not blocked | Lead (sprint planning) |
+| Backlog in the current iteration, blocked | Whoever acts next on the blocker |
+| Backlog outside the iteration, blocks a task of the iteration | Product owner (only they can pull it in) |
+| Other Backlog | Nobody: it waits to be pulled |
+| Ready / In Progress | Developer |
+| PR open, review requested from the Lead | Lead |
+| Lead requested changes | Developer |
+| Lead approved, product owner's review requested | Product owner |
+| Product owner approved | Lead (merge) |
+| Open without status, or Done but still open | Product owner: a gap the process must not hide |
+| Closed | Nobody |
 
 **Assignee = inbox.** Everything assigned to you is your next step. Decisions are written as comments: a comment of the product owner on an item assigned to the Lead, or a manual assignment to the Lead, reaches the Lead automatically. A manual assignment by the product owner wins over the automatic rule while the item is in Triage, Backlog or In review.
 
@@ -82,7 +89,7 @@ Assignee = whoever acts next (kept up to date by a script every 10 minutes):
 1. **Intake** – Ideas become issues (feature, task or bug) in any repository. A watcher adds every open issue to the project in **Triage**.
 2. **Refinement (Lead)** – The Lead clarifies open points with the product owner, sets type and parent, splits each feature into task sub-issues – goal, acceptance criteria, scope (allowed files, test command), steps, points and a line ``Branch: `wp/<name>` (base: `main`)`` – and adds the feature's **closing task** *Acceptance and release vX.Y.Z*. The cards stay in Triage and are assigned to the product owner. Nothing in Triage is started.
 3. **Refinement review (product owner)** – The product owner reviews the refinement and moves the cards to **Backlog** and into the current **iteration** – or comments, and the card goes back to the Lead.
-4. **Sprint planning (Lead)** – One planning run over all items of the iteration: dependencies as *blocked by*, points, a parallel plan across the developer instances (no two parallel tasks on the same files), published as a *Sprint n plan* issue. Tasks without open dependencies get the Developer, an *Instance* and **Ready**. New work found during a sprint is only proposed in the plan; the product owner decides.
+4. **Sprint planning (Lead)** – One planning run over all items of the iteration: dependencies as *blocked by*, points, a parallel plan across the developer instances (no two parallel tasks on the same files), published as a *Sprint n plan* issue. Tasks without open dependencies get the Developer, an *Instance* and **Ready**. New work found during a sprint is only proposed in the plan; the product owner decides. The parts of an approved card that the Lead splits inherit its status and iteration; if the scope changes, they go through Triage to the product owner.
 5. **Implementation** – A dispatcher starts the first Ready task of the current iteration per free instance in a dedicated worktree and sets **In Progress**. The developer works test-first, commits, pushes and opens the PR with `Closes #<task>` and requests the Lead's review. Status moves to **In review**.
 6. **Review (Lead)** – A review starts from the generated pack and runs in a **fresh checker session** (see *Review context*): quality gates (CI, coverage, lint), mutation probes against "false green" tests, a formal GitHub review posted from the checker's verdict. *Request changes* sends the task back to Ready for the next round. On approval the Lead requests the product owner's review.
 7. **Approval and merge** – The product owner approves (a reminder comes after 2 h of waiting); the Lead merges. The task closes and moves to **Done**; merged predecessors unblock the next tasks.
