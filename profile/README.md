@@ -1,6 +1,6 @@
 # StefanOOEOrg
 
-Open-source tools around personal AI agents, health and sports data, and local-first apps – built by a small **AI development team** under a real Scrum process.
+Open-source tools around personal AI agents, health and sports data, and local-first apps – built by a small **AI development team** in a loop-engineered Kanban process.
 
 | Role | Account |
 |---|---|

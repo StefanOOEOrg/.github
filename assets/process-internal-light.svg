@@ -10,13 +10,13 @@
 <rect width="1628" height="1446" fill="#ffffff"/>
 <rect width="1628" height="1446" fill="url(#grid)"/>
 <text x="28" y="46" fill="#0f172a" font-size="20" font-weight="bold">Development process</text>
-<text x="28" y="70" fill="#475569" font-size="11">Triage → refinement review → sprint planning → one task = one developer run = one PR → Lead and product owner approve → release</text>
+<text x="28" y="70" fill="#475569" font-size="11">Triage → refinement review → pull onto Goal → one task = one developer run = one PR → Lead and product owner approve → release</text>
 <rect x="28" y="90" width="300" height="1312" rx="12" fill="rgba(180, 83, 9, 0.06)" stroke="#b45309" stroke-width="1" stroke-dasharray="8,4"/>
 <text x="44" y="110" fill="#b45309" font-size="13" font-weight="bold">Product owner</text>
-<text x="44" y="125" fill="#475569" font-size="9">StefanOOE · backlog, sprint, 2nd approval</text>
+<text x="44" y="125" fill="#475569" font-size="9">StefanOOE · backlog, pull, 2nd approval</text>
 <rect x="346" y="90" width="300" height="1312" rx="12" fill="rgba(14, 116, 144, 0.06)" stroke="#0e7490" stroke-width="1" stroke-dasharray="8,4"/>
 <text x="362" y="110" fill="#0e7490" font-size="13" font-weight="bold">Lead</text>
-<text x="362" y="125" fill="#475569" font-size="9">StefanOOELeadBot · refine, plan, review, merge</text>
+<text x="362" y="125" fill="#475569" font-size="9">StefanOOELeadBot · refine, review, merge</text>
 <rect x="664" y="90" width="300" height="1312" rx="12" fill="rgba(109, 40, 217, 0.06)" stroke="#6d28d9" stroke-width="1" stroke-dasharray="8,4"/>
 <text x="680" y="110" fill="#6d28d9" font-size="13" font-weight="bold">Project board</text>
 <text x="680" y="125" fill="#475569" font-size="9">Product Backlog · watcher · dispatcher</text>
@@ -29,10 +29,10 @@
 <path d="M 308 169 L 684 169" fill="none" stroke="#6d28d9" stroke-width="1.4" marker-end="url(#arrow2)"/>
 <path d="M 814 192 L 814 206 L 496 206 L 496 220" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
 <path d="M 496 266 L 496 280 L 178 280 L 178 294" fill="none" stroke="#b45309" stroke-width="1.4" marker-end="url(#arrow0)"/>
-<path d="M 178 340 L 178 354 L 496 354 L 496 368" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
-<rect x="485" y="332" width="22" height="16" rx="3" fill="#ffffff" opacity="0.92"/>
-<text x="496" y="344" fill="#0e7490" font-size="9.5" text-anchor="middle">OK</text>
-<path d="M 496 414 L 496 428 L 814 428 L 814 442" fill="none" stroke="#6d28d9" stroke-width="1.4" marker-end="url(#arrow2)"/>
+<path d="M 178 340 L 178 368" fill="none" stroke="#b45309" stroke-width="1.4" marker-end="url(#arrow0)"/>
+<rect x="167" y="351" width="22" height="16" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="178" y="363" fill="#b45309" font-size="9.5" text-anchor="middle">OK</text>
+<path d="M 178 414 L 178 428 L 814 428 L 814 442" fill="none" stroke="#6d28d9" stroke-width="1.4" marker-end="url(#arrow2)"/>
 <path d="M 814 488 L 814 516" fill="none" stroke="#6d28d9" stroke-width="1.4" marker-end="url(#arrow2)"/>
 <path d="M 814 562 L 814 576 L 1132 576 L 1132 590" fill="none" stroke="#047857" stroke-width="1.4" marker-end="url(#arrow3)"/>
 <path d="M 1132 636 L 1132 664" fill="none" stroke="#047857" stroke-width="1.4" marker-end="url(#arrow3)"/>
@@ -52,8 +52,8 @@
 <path d="M 178 1228 L 178 1242 L 496 1242 L 496 1256" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
 <path d="M 496 1302 L 496 1330" fill="none" stroke="#0e7490" stroke-width="1.4" marker-end="url(#arrow1)"/>
 <path d="M 626 849 L 954 849 L 954 465 L 944 465" fill="none" stroke="#6d28d9" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow2)"/>
-<rect x="793" y="647" width="160" height="16" rx="3" fill="#ffffff" opacity="0.92"/>
-<text x="948" y="659" fill="#6d28d9" font-size="9.5" text-anchor="end">Request changes → round 2</text>
+<rect x="709" y="647" width="244" height="16" rx="3" fill="#ffffff" opacity="0.92"/>
+<text x="948" y="659" fill="#6d28d9" font-size="9.5" text-anchor="end">Request changes → next round, at most 3</text>
 <path d="M 308 331 L 636 331 L 636 243 L 626 243" fill="none" stroke="#0e7490" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrow1)"/>
 <rect x="577" y="277" width="58" height="16" rx="3" fill="#ffffff" opacity="0.92"/>
 <text x="630" y="289" fill="#0e7490" font-size="9.5" text-anchor="end">comments</text>
@@ -72,18 +72,18 @@
 <rect x="48" y="294" width="260" height="46" rx="6" fill="#ffffff"/>
 <rect x="48" y="294" width="260" height="46" rx="6" fill="rgba(180, 83, 9, 0.12)" stroke="#0f172a" stroke-width="2"/>
 <text x="178" y="315" fill="#0f172a" font-size="10.5" text-anchor="middle">Review the refinement:</text>
-<text x="178" y="328" fill="#0f172a" font-size="10.5" text-anchor="middle">Backlog + iteration</text>
-<rect x="366" y="368" width="260" height="46" rx="6" fill="#ffffff"/>
-<rect x="366" y="368" width="260" height="46" rx="6" fill="rgba(14, 116, 144, 0.12)" stroke="#0e7490" stroke-width="1.4"/>
-<text x="496" y="389" fill="#0f172a" font-size="10.5" text-anchor="middle">Sprint planning in one run:</text>
-<text x="496" y="402" fill="#0f172a" font-size="10.5" text-anchor="middle">points, blocked-by, instances</text>
+<text x="178" y="328" fill="#0f172a" font-size="10.5" text-anchor="middle">move to Backlog</text>
+<rect x="48" y="368" width="260" height="46" rx="6" fill="#ffffff"/>
+<rect x="48" y="368" width="260" height="46" rx="6" fill="rgba(180, 83, 9, 0.12)" stroke="#0f172a" stroke-width="2"/>
+<text x="178" y="389" fill="#0f172a" font-size="10.5" text-anchor="middle">Pull onto Goal:</text>
+<text x="178" y="402" fill="#0f172a" font-size="10.5" text-anchor="middle">column order = priority</text>
 <rect x="684" y="442" width="260" height="46" rx="6" fill="#ffffff"/>
 <rect x="684" y="442" width="260" height="46" rx="6" fill="rgba(109, 40, 217, 0.12)" stroke="#6d28d9" stroke-width="1.4" stroke-dasharray="4,3"/>
-<text x="814" y="469" fill="#0f172a" font-size="10.5" text-anchor="middle">Ready</text>
+<text x="814" y="469" fill="#0f172a" font-size="10.5" text-anchor="middle">Goal</text>
 <rect x="684" y="516" width="260" height="46" rx="6" fill="#ffffff"/>
 <rect x="684" y="516" width="260" height="46" rx="6" fill="rgba(109, 40, 217, 0.12)" stroke="#6d28d9" stroke-width="1.4" stroke-dasharray="4,3"/>
-<text x="814" y="537" fill="#0f172a" font-size="10.5" text-anchor="middle">Dispatcher: Ready task of</text>
-<text x="814" y="550" fill="#0f172a" font-size="10.5" text-anchor="middle">the sprint, free instance</text>
+<text x="814" y="537" fill="#0f172a" font-size="10.5" text-anchor="middle">Dispatcher: free instance,</text>
+<text x="814" y="550" fill="#0f172a" font-size="10.5" text-anchor="middle">no blocker → Action</text>
 <rect x="1002" y="590" width="260" height="46" rx="6" fill="#ffffff"/>
 <rect x="1002" y="590" width="260" height="46" rx="6" fill="rgba(4, 120, 87, 0.12)" stroke="#047857" stroke-width="1.4"/>
 <text x="1132" y="611" fill="#0f172a" font-size="10.5" text-anchor="middle">Own worktree,</text>
@@ -94,7 +94,7 @@
 <text x="1132" y="698" fill="#0f172a" font-size="10.5" text-anchor="middle">PR with Closes #task</text>
 <rect x="1320" y="664" width="260" height="46" rx="6" fill="#ffffff"/>
 <rect x="1320" y="664" width="260" height="46" rx="6" fill="rgba(190, 18, 60, 0.12)" stroke="#be123c" stroke-width="1.4" stroke-dasharray="4,3"/>
-<text x="1450" y="691" fill="#0f172a" font-size="10.5" text-anchor="middle">CI runs (ci-ok)</text>
+<text x="1450" y="691" fill="#0f172a" font-size="10.5" text-anchor="middle">CI runs (ci-ok) · Verify</text>
 <rect x="366" y="738" width="260" height="46" rx="6" fill="#ffffff"/>
 <rect x="366" y="738" width="260" height="46" rx="6" fill="rgba(14, 116, 144, 0.12)" stroke="#0e7490" stroke-width="1.4"/>
 <text x="496" y="759" fill="#0f172a" font-size="10.5" text-anchor="middle">Review: diff, gates,</text>
@@ -129,7 +129,7 @@
 <text x="496" y="1290" fill="#0f172a" font-size="10.5" text-anchor="middle">close the feature</text>
 <rect x="366" y="1330" width="260" height="46" rx="6" fill="#ffffff"/>
 <rect x="366" y="1330" width="260" height="46" rx="6" fill="rgba(14, 116, 144, 0.12)" stroke="#0e7490" stroke-width="1.4"/>
-<text x="496" y="1351" fill="#0f172a" font-size="10.5" text-anchor="middle">Sprint end: review +</text>
-<text x="496" y="1364" fill="#0f172a" font-size="10.5" text-anchor="middle">retro, LESSONS.md</text>
+<text x="496" y="1351" fill="#0f172a" font-size="10.5" text-anchor="middle">Retro every two weeks,</text>
+<text x="496" y="1364" fill="#0f172a" font-size="10.5" text-anchor="middle">LESSONS.md</text>
 <text x="28" y="1430" fill="#475569" font-size="9.5">solid = regular flow · dashed = loop back · dashed box = board or system state · bold border = decision · the last task of every feature is its closing task</text>
 </svg>

@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# GitHub watch for the Lead (replaces board-watch.sh). No-agent cron in the sw-lead profile:
+# GitHub watch for the Lead. No-agent cron in the sw-lead profile:
 #
 #   hermes cron create 10m --name github-watch --script github-watch.sh --no-agent \
 #     --deliver bot-chat:sw-lead --failure-deliver local
 #
-# Reports only NEW events (state file), stdout = delivery payload, empty = silent:
-#   - PR waiting for the Lead's review (review requested from StefanOOELeadBot)
-#   - PR approved by Stefan and not merged yet  -> Lead merges
-#   - Stefan requested changes on a PR (once per review id, reminder after 2 h and 24 h)
-#   - task "In Progress" for longer than STALE_HOURS without a linked PR -> dev run probably died
+# The assignee says who acts next, so the watch reports the Lead's inbox and only what the assignee
+# cannot show. Open events repeat every hour; stdout = delivery payload, empty = silent.
+#   Inbox: review requested, ready to merge, Stefan's changes, comment or assignment, unrefined Triage
+#   Checks: stalled Action card, Verify without PR, PR on a Triage card, PR without Closes line,
+#           issue missing from the project, merged .github PR to review afterwards, retro due
+#   Stefan: approve reminder as a comment on the PR
 # The snapshot file always carries the full current state (read it before answering "status?").
 set -euo pipefail
 
@@ -22,9 +23,9 @@ mkdir -p "$PROFILE_DIR/cache"
 
 python3 - "$ORG" "$PROJECT" "$LEAD" "$OWNER_LOGIN" "$STALE_HOURS" "$PROFILE_DIR/cache" <<'PY'
 import json, os, re, subprocess, sys, time
-from zoneinfo import ZoneInfo
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 org, project, lead, owner, stale_h, cache = sys.argv[1:7]
 cache = Path(cache)
@@ -32,365 +33,284 @@ cache = Path(cache)
 GH_TIMEOUT = 60  # seconds per gh call; a hung call must not block the cron run
 GH_ATTEMPTS = 3  # GitHub answers 502/504 on the big project query now and then; retry reads
 GH_BACKOFF = (2, 5)  # seconds before the second and third attempt
+REMIND_MINUTES = 60  # a delivery can fail unseen, so an open event is printed again
+ONCE = ("orphan:", "postmerge:", "retro:")  # reported a single time, no reminder
+TRIAGE_HOURS = 2  # unrefined items longer in Triage need the Lead
+OWNER_WAIT_HOURS, OWNER_REPEAT_HOURS = 2, 24  # approve reminder: first after, then at most every
+RETRO_START, RETRO_DAYS = date(2026, 11, 14), 14  # fixed retro rhythm, every two weeks
+OUTER_LOOP_REPO = ".github"  # maintained directly; the Lead reviews after the merge
+BUDGET_STATE = "github-budget-reported"
+
+PR_QUERY = """query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on PullRequest {
+  url number title body headRefOid repository { name nameWithOwner }
+  commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
+  reviewRequests(first: 10) { nodes { requestedReviewer { ... on User { login } } } }
+  reviews(last: 30) { nodes { id author { login } state body submittedAt commit { oid } } } } } } }"""
+ISSUE_QUERY = """query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on Issue {
+  url number title repository { name } projectItems(first: 5) { nodes { project { number } } } } } } }"""
+BOARD_QUERY = """query($org: String!, $num: Int!, $after: String) { organization(login: $org) { projectV2(number: $num) {
+  items(first: 100, after: $after) { pageInfo { hasNextPage endCursor } nodes {
+    status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+    instance: fieldValueByName(name: "Instance") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+    content { ... on Issue { url number title state body createdAt updatedAt repository { name }
+      issueType { name } subIssues(first: 1) { totalCount }
+      assignees(first: 5) { nodes { login } } comments(last: 1) { nodes { id createdAt author { login } } }
+      timelineItems(last: 1, itemTypes: [ASSIGNED_EVENT]) { nodes { ... on AssignedEvent { id createdAt actor { login } assignee { ... on User { login } } } } }
+      closedByPullRequestsReferences(first: 3, includeClosedPrs: false) { nodes { number } } } } } } } } }"""
+
+
+class BudgetExhausted(Exception):
+    """The GraphQL budget of the token is used up (#44)."""
 
 
 def gh(*args):
-    """Run a read-only ``gh`` call, retrying the transient gateways failures.
+    """Run a read-only ``gh`` call, retrying the transient gateway failures.
 
-    The project query returns a few hundred kilobytes and GitHub occasionally answers
-    it with a 502/504 or a reset; a cron run that dies on that reports nothing at all.
-    Every call here is a read, so a retry is safe.
+    The project query is big and GitHub occasionally answers it with a 502/504 or a reset; a cron
+    run that dies on that reports nothing at all. Every call here is a read, so a retry is safe.
     """
     last = None
     for attempt in range(GH_ATTEMPTS):
         try:
             return subprocess.run(["gh", *args], check=True, capture_output=True, text=True,
                                   timeout=GH_TIMEOUT).stdout
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        except subprocess.TimeoutExpired as error:
             last = error
-            if attempt < len(GH_BACKOFF):
-                time.sleep(GH_BACKOFF[attempt])
+        except subprocess.CalledProcessError as error:
+            if "rate limit" in (error.stderr or "").lower() or "RATE_LIMITED" in (error.stdout or ""):
+                raise BudgetExhausted from error
+            last = error
+        if attempt < len(GH_BACKOFF):
+            time.sleep(GH_BACKOFF[attempt])
     raise last
 
-events = {}
-for pr in json.loads(gh("search", "prs", "--owner", org, "--state", "open", "--review-requested", lead,
-                        "--json", "url,title,repository,number")):
-    events[f"review:{pr['url']}"] = f"Review wartet: {pr['repository']['name']}#{pr['number']} {pr['title'][:80]} {pr['url']}"
-for pr in json.loads(gh("search", "prs", "--owner", org, "--state", "open", "--review", "approved",
-                        "--json", "url,title,repository,number")):
-    reviews = json.loads(gh("pr", "view", pr["url"], "--json", "reviews"))["reviews"]
-    if any(r["author"]["login"] == owner and r["state"] == "APPROVED" for r in reviews):
-        events[f"merge:{pr['url']}"] = f"Stefan hat approved, mergen: {pr['repository']['name']}#{pr['number']} {pr['url']}"
 
-# Lead approved but forgot `gh pr edit --add-reviewer StefanOOE`: Stefan gets no request and the PR stalls.
-PR_QUERY = """query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on PullRequest {
-  url number body repository { name }
-  reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } } } }
-  reviews(last: 100) { nodes { author { login } state } } } } } }"""
-prs = json.loads(gh("api", "graphql", "-f", f"query={PR_QUERY}", "-f", f"q=is:pr is:open org:{org}"))
-for pr in prs["data"]["search"]["nodes"]:
-    reviews = [(r["author"] or {}).get("login") for r in pr["reviews"]["nodes"]]
-    lead_states = [r["state"] for r in pr["reviews"]["nodes"] if (r["author"] or {}).get("login") == lead]
-    requested = {(r["requestedReviewer"] or {}).get("login") for r in pr["reviewRequests"]["nodes"]}
-    if lead_states and lead_states[-1] == "APPROVED" and owner not in requested and owner not in reviews:
-        events[f"ask-owner:{pr['url']}"] = (f"Lead hat approved, Stefan nicht angefragt: "
-                                            f"{pr['repository']['name']}#{pr['number']} {pr['url']}")
+def slug(item):
+    return f"{item['repository']['name']}#{item['number']}"
 
 
-def has_closing_line(body: str) -> bool:
+def login(node):
+    return (node.get("author") or node.get("actor") or {}).get("login")
+
+
+def latest_state(reviews, who):
+    """Return the reviewer's latest deciding review, or None."""
+    own = [r for r in reviews if login(r) == who and r["state"] in ("APPROVED", "CHANGES_REQUESTED")]
+    return own[-1] if own else None
+
+
+def has_closing_line(body):
     """True if the PR body carries a GitHub closing keyword (`close|fix|resolve` + `#<n>`, anywhere)."""
     return re.search(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*#\d+", body or "", re.I) is not None
 
 
-# Every PR closes its task (PROCESS.md quality gates: the body starts with `Closes #<task>`). Without that line
-# neither the assignee sync nor the dispatcher can relate a PR to a task (#16), so each such PR is reported once.
-for pr in prs["data"]["search"]["nodes"]:
-    if not has_closing_line(pr.get("body")):
-        events[f"orphan:{pr['url']}"] = (f"pr: ⚠️ ohne Closes-Zeile: "
-                                         f"{pr['repository']['name']}#{pr['number']} {pr['url']}")
+def pr_events(prs, events):
+    """Report the open PRs: the Lead's inbox and PRs without a closing line."""
+    for pr in prs:
+        name = f"{slug(pr)} {pr['title'][:70]} {pr['url']}"
+        requested = {(r["requestedReviewer"] or {}).get("login") for r in pr["reviewRequests"]["nodes"]}
+        reviews = pr["reviews"]["nodes"]
+        own, by_lead = latest_state(reviews, owner), latest_state(reviews, lead)
+        if lead in requested:
+            events[f"review:{pr['url']}"] = f"Inbox – Review wartet: {name}"
+        if own and own["state"] == "APPROVED":
+            events[f"merge:{pr['url']}"] = f"Inbox – Stefan hat approved, mergen: {name}"
+        if own and own["state"] == "CHANGES_REQUESTED" and (own.get("commit") or {}).get("oid") == pr["headRefOid"]:
+            first = next((ln.strip() for ln in (own.get("body") or "").splitlines() if ln.strip()), "")
+            events[f"changes:{own['id']}"] = f"Inbox – Stefan will Änderungen: {name}\n  {first[:200]}".rstrip()
+        if by_lead and by_lead["state"] == "APPROVED" and owner not in requested and not own:
+            events[f"ask-owner:{pr['url']}"] = f"Inbox – Lead hat approved, Stefan anfragen: {name}"
+        if not has_closing_line(pr.get("body")):
+            events[f"orphan:{pr['url']}"] = f"pr: ⚠️ ohne Closes-Zeile: {slug(pr)} {pr['url']}"
 
-# Approve reminder (Stefan, 2026-11-04): a PR that waits only for the product owner's approval for more than
-# OWNER_WAIT_HOURS gets one @StefanOOE comment per head commit, repeated at most every OWNER_REPEAT_HOURS.
-# "Only waits for him" = the Lead's latest review on the current head is APPROVED, CI is green and his review is
-# requested. Re-approvals after a push are easy to miss otherwise (#78, #32).
-OWNER_WAIT_HOURS, OWNER_REPEAT_HOURS = 2, 24
-WAIT_QUERY = """query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on PullRequest {
-  url number title headRefOid repository { name nameWithOwner }
-  commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
-  reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { login } } } }
-  reviews(last: 50) { nodes { id author { login } state body submittedAt commit { oid } } } } } } }"""
-remind_p = cache / "approve-reminders.json"
-try:
-    reminded = json.loads(remind_p.read_text())
-except (FileNotFoundError, json.JSONDecodeError):
-    reminded = {}
-waiting = json.loads(gh("api", "graphql", "-f", f"query={WAIT_QUERY}", "-f", f"q=is:pr is:open org:{org}"))
-now_utc = datetime.now(timezone.utc)
-for pr in waiting["data"]["search"]["nodes"]:
-    head = pr["headRefOid"]
-    requested = {(r["requestedReviewer"] or {}).get("login") for r in pr["reviewRequests"]["nodes"]}
-    on_head = [r for r in pr["reviews"]["nodes"] if (r.get("commit") or {}).get("oid") == head]
-    lead_on_head = [r for r in on_head if (r["author"] or {}).get("login") == lead and r["state"] in ("APPROVED", "CHANGES_REQUESTED")]
-    rollup = ((pr["commits"]["nodes"] or [{}])[0].get("commit") or {}).get("statusCheckRollup") or {}
-    if (owner not in requested or not lead_on_head or lead_on_head[-1]["state"] != "APPROVED"
-            or rollup.get("state") not in (None, "SUCCESS")):
-        continue
-    since = datetime.fromisoformat(lead_on_head[-1]["submittedAt"].replace("Z", "+00:00"))
-    last = reminded.get(pr["url"], {})
-    if now_utc - since < timedelta(hours=OWNER_WAIT_HOURS):
-        continue
-    if last.get("head") == head and now_utc - datetime.fromisoformat(last["at"]) < timedelta(hours=OWNER_REPEAT_HOURS):
-        continue
-    hours = int((now_utc - since).total_seconds() // 3600)
-    body = (f"@{owner} this PR has waited {hours} h only for your approval: the Lead approved the current head "
-            f"`{head[:7]}`, CI is green. After your approval the Lead merges it.\n\n"
-            "<sub>Automatic reminder from github-watch (again after 24 h at the earliest).</sub>")
+
+def remind_owner(prs, events):
+    """Comment on a PR that waits only for the product owner's approval (#78, #32)."""
+    path = cache / "approve-reminders.json"
     try:
-        subprocess.run(["gh", "api", f"repos/{pr['repository']['nameWithOwner']}/issues/{pr['number']}/comments",
-                        "-f", f"body={body}"], check=True, capture_output=True, text=True, timeout=GH_TIMEOUT)
-        reminded[pr["url"]] = {"head": head, "at": now_utc.isoformat()}
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
-        events[f"remind-failed:{pr['url']}"] = f"Approve-Erinnerung an Stefan fehlgeschlagen: {pr['url']} ({error})"
-remind_p.write_text(json.dumps(reminded, sort_keys=True))
+        reminded = json.loads(path.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        reminded = {}
+    now = datetime.now(timezone.utc)
+    for pr in prs:
+        head = pr["headRefOid"]
+        requested = {(r["requestedReviewer"] or {}).get("login") for r in pr["reviewRequests"]["nodes"]}
+        on_head = [r for r in pr["reviews"]["nodes"] if (r.get("commit") or {}).get("oid") == head]
+        by_lead = latest_state(on_head, lead)
+        rollup = ((pr["commits"]["nodes"] or [{}])[0].get("commit") or {}).get("statusCheckRollup") or {}
+        if owner not in requested or not by_lead or by_lead["state"] != "APPROVED" \
+                or rollup.get("state") not in (None, "SUCCESS"):
+            continue
+        since = datetime.fromisoformat(by_lead["submittedAt"].replace("Z", "+00:00"))
+        last = reminded.get(pr["url"], {})
+        if now - since < timedelta(hours=OWNER_WAIT_HOURS):
+            continue
+        if last.get("head") == head and now - datetime.fromisoformat(last["at"]) < timedelta(hours=OWNER_REPEAT_HOURS):
+            continue
+        hours = int((now - since).total_seconds() // 3600)
+        body = (f"@{owner} this PR has waited {hours} h only for your approval: the Lead approved the current head "
+                f"`{head[:7]}`, CI is green. After your approval the Lead merges it.\n\n"
+                "<sub>Automatic reminder from github-watch (again after 24 h at the earliest).</sub>")
+        try:
+            subprocess.run(["gh", "api", f"repos/{pr['repository']['nameWithOwner']}/issues/{pr['number']}/comments",
+                            "-f", f"body={body}"], check=True, capture_output=True, text=True, timeout=GH_TIMEOUT)
+            reminded[pr["url"]] = {"head": head, "at": now.isoformat()}
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+            events[f"remind-failed:{pr['url']}"] = f"Approve-Erinnerung an Stefan fehlgeschlagen: {pr['url']} ({error})"
+    path.write_text(json.dumps(reminded, sort_keys=True))
 
-# Safety net: every open org issue belongs in the project (auto-add covers one repo per workflow only).
-ISSUE_QUERY = """query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on Issue {
-  url number title repository { name } projectItems(first: 10) { nodes { project { number } } } } } } }"""
-found = json.loads(gh("api", "graphql", "-f", f"query={ISSUE_QUERY}",
-                      "-f", f"q=is:issue is:open archived:false org:{org}"))["data"]["search"]["nodes"]
-def is_sprint_doc(issue: dict) -> bool:
-    """Sprint plan/review issues in .github are documents, not work items."""
-    return issue["repository"]["name"] == ".github" and issue["title"].startswith("Sprint ")
+
+def is_doc(issue):
+    """Sprint and retro issues in .github are documents, not work items."""
+    return issue["repository"]["name"] == OUTER_LOOP_REPO and issue["title"].startswith(("Sprint ", "Retro "))
 
 
-missing = [i for i in found if not is_sprint_doc(i) and str(project) not in
-           {str(n["project"]["number"]) for n in i["projectItems"]["nodes"]}]
-if missing:
+def add_missing(events):
+    """Safety net: every open org issue belongs in the project (auto-add covers one repo per workflow only)."""
+    found = json.loads(gh("api", "graphql", "-f", f"query={ISSUE_QUERY}",
+                          "-f", f"q=is:issue is:open archived:false org:{org}"))["data"]["search"]["nodes"]
+    missing = [i for i in found if not is_doc(i)
+               and str(project) not in {str(n["project"]["number"]) for n in i["projectItems"]["nodes"]}]
+    if not missing:
+        return
     fields = {f["name"]: f for f in json.loads(gh("project", "field-list", project, "--owner", org,
                                                    "--format", "json"))["fields"]}
     triage = next(o["id"] for o in fields["Status"]["options"] if o["name"] == "Triage")
     pid = json.loads(gh("project", "view", project, "--owner", org, "--format", "json"))["id"]
-for i in missing:
-    item = json.loads(gh("project", "item-add", project, "--owner", org, "--url", i["url"],
-                         "--format", "json"))["id"]
-    gh("project", "item-edit", "--project-id", pid, "--id", item, "--field-id", fields["Status"]["id"],
-       "--single-select-option-id", triage)
-    events[f"added:{i['url']}"] = (f"Neu im Project (Triage): {i['repository']['name']}#{i['number']} "
-                                   f"{i['title'][:80]} {i['url']}")
-
-# Sprint planning: the product owner sets Iteration; the Lead refines and sets Ready. Report items of the
-# current iteration that are still in Triage/Backlog, so the Lead does not have to be poked.
-SPRINT_QUERY = """query($org: String!, $num: Int!, $after: String) { organization(login: $org) { projectV2(number: $num) {
-  items(first: 100, after: $after) { pageInfo { hasNextPage endCursor } nodes {
-    status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
-    instance: fieldValueByName(name: "Instance") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
-    iteration: fieldValueByName(name: "Iteration") { ... on ProjectV2ItemFieldIterationValue { title startDate duration } }
-    content { ... on Issue { url number title state body createdAt repository { name nameWithOwner } issueType { name } subIssues(first: 1) { totalCount } issueDependenciesSummary { blockedBy }
-      assignees(first: 5) { nodes { login } } comments(last: 1) { nodes { id createdAt author { login } } }
-      timelineItems(last: 1, itemTypes: [ASSIGNED_EVENT]) { nodes { ... on AssignedEvent { id createdAt actor { login } assignee { ... on User { login } } } } }
-      closedByPullRequestsReferences(first: 3, includeClosedPrs: false) { nodes { number state } } } } } } } } }"""
-# WATCH_TODAY=YYYY-MM-DD simulates a date for tests; otherwise today in Vienna (iterations are calendar days there)
-today = (datetime.fromisoformat(os.environ["WATCH_TODAY"]).date() if os.environ.get("WATCH_TODAY")
-         else datetime.now(ZoneInfo("Europe/Vienna")).date())
-
-# A task of the running iteration can hang on a blocker that is not in it: the blocker sits in Backlog without
-# an interval, appears in nobody's list and the sprint stands still while the watch reports nothing (#24, #28).
-BLOCKER_QUERY = """query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) {
-  issue(number: $number) { blockedBy(first: 50) { nodes { number state
-    projectItems(first: 20) { nodes { project { number }
-      iteration: fieldValueByName(name: "Iteration") { ... on ProjectV2ItemFieldIterationValue { startDate duration } } } }
-  } } } } }"""
+    for i in missing:
+        item = json.loads(gh("project", "item-add", project, "--owner", org, "--url", i["url"],
+                             "--format", "json"))["id"]
+        gh("project", "item-edit", "--project-id", pid, "--id", item, "--field-id", fields["Status"]["id"],
+           "--single-select-option-id", triage)
+        events[f"added:{i['url']}"] = f"Neu im Project (Triage): {slug(i)} {i['title'][:80]} {i['url']}"
 
 
-def in_running_iteration(blocker: dict) -> bool:
-    """True if the blocker card carries an iteration of this project that is running today."""
-    for item in ((blocker.get("projectItems") or {}).get("nodes") or []):
-        if str((item.get("project") or {}).get("number")) != str(project):
-            continue
-        it = item.get("iteration")
-        if not it:
-            return False
-        start = datetime.fromisoformat(it["startDate"]).date()
-        return start <= today < start + timedelta(days=it["duration"])
-    return False  # not on this board at all: nobody planned the blocker into a sprint
+def board_items():
+    """Yield the open issues on the board with their status and instance."""
+    after = None
+    while True:
+        args = ["api", "graphql", "-f", f"query={BOARD_QUERY}", "-f", f"org={org}", "-F", f"num={project}"]
+        page = json.loads(gh(*args + (["-f", f"after={after}"] if after else [])))
+        page = page["data"]["organization"]["projectV2"]["items"]
+        for node in page["nodes"]:
+            if (node.get("content") or {}).get("state") == "OPEN":
+                yield node
+        if not page["pageInfo"]["hasNextPage"]:
+            return
+        after = page["pageInfo"]["endCursor"]
 
 
-def blockers_outside_iteration(number: int, name_with_owner: str) -> list[int]:
-    """Numbers of the open blockers of one issue that are not in the project's running iteration.
-
-    Closed blockers are skipped: they no longer hold anything back, and asking the Lead to pull a
-    finished task into the sprint would be noise.
-    """
-    owner, name = name_with_owner.split("/", 1)
-    data = json.loads(gh("api", "graphql", "-f", f"query={BLOCKER_QUERY}", "-f", f"owner={owner}",
-                         "-f", f"name={name}", "-F", f"number={number}"))
-    nodes = ((data["data"]["repository"]["issue"] or {}).get("blockedBy") or {}).get("nodes") or []
-    return [b["number"] for b in nodes if b["state"] == "OPEN" and not in_running_iteration(b)]
+def refined(issue):
+    """A task is refined with its Branch line, a feature with sub-issues."""
+    if (issue.get("issueType") or {}).get("name") == "Feature":
+        return issue["subIssues"]["totalCount"] > 0
+    return re.search(r"Branch:\s*`[^`]+`", issue.get("body") or "") is not None
 
 
-after = None
-sprint_end = {}  # iteration title -> open items on its last day
-TRIAGE_HOURS = 2  # items the project workflow parked in Triage longer than this need the Lead
-busy, refinable = set(), 0  # instances with a Ready/In Progress task; unrefined tasks in the current iteration
-while True:
-    args = ["api", "graphql", "-f", f"query={SPRINT_QUERY}", "-f", f"org={org}", "-F", f"num={project}"]
-    page = json.loads(gh(*args + (["-f", f"after={after}"] if after else [])))
-    page = page["data"]["organization"]["projectV2"]["items"]
-    for node in page["nodes"]:
-        it, c = node.get("iteration"), node.get("content") or {}
-        status = (node.get("status") or {}).get("name")
-        # Inbox: everything assigned to the Lead. Unanswered comments of the product owner and his manual
-        # assignments are the Lead's next step:
-        # decisions are written as comments, and the watch would not see them otherwise (.github#24).
-        last_comment = ((c.get("comments") or {}).get("nodes") or [None])[-1]
-        if (c.get("state") == "OPEN" and last_comment and (last_comment["author"] or {}).get("login") == owner
-                and lead in {a["login"] for a in c["assignees"]["nodes"]}):
-            events[f"owner-comment:{last_comment['id']}"] = (f"Inbox – Stefan hat kommentiert, du bist dran: "
-                                                             f"{c['repository']['name']}#{c['number']} {c['title'][:70]} {c['url']}")
-        assigned = ((c.get("timelineItems") or {}).get("nodes") or [None])[-1]
-        if (c.get("state") == "OPEN" and assigned and (assigned.get("actor") or {}).get("login") == owner
-                and (assigned.get("assignee") or {}).get("login") == lead
-                and not (last_comment and (last_comment["author"] or {}).get("login") == lead
-                         and last_comment["createdAt"] > assigned["createdAt"])):
-            events[f"owner-assigned:{assigned['id']}"] = (f"Inbox – Stefan hat dir das zugewiesen: "
-                                                          f"{c['repository']['name']}#{c['number']} {c['title'][:70]} {c['url']}")
-        open_prs = [pr["number"] for pr in ((c.get("closedByPullRequestsReferences") or {}).get("nodes") or [])
-                    if pr["state"] == "OPEN"]
-        if status == "Triage" and c.get("state") == "OPEN" and open_prs:
-            events[f"triage-pr:{c['url']}"] = (f"PR #{open_prs[0]} zu einem Triage-Item – Triage-Karten werden nicht begonnen "
-                                             f"(Stefan gibt sie erst frei): {c['repository']['name']}#{c['number']} {c['url']}")
-        # A card on In review without a PR is a board lie: nobody can review, and the card looks busy (#17, #28).
-        if status == "In review" and c.get("state") == "OPEN" and not open_prs:
-            events[f"board:{c['url']}"] = (f"board: ⚠️ #{c['number']} steht auf In review ohne verlinkten PR: {c['url']}")
-        task_refined = re.search(r"Branch:\s*`[^`]+`", c.get("body") or "") is not None
-        feature_split = (c.get("issueType") or {}).get("name") == "Feature" and (c.get("subIssues") or {}).get("totalCount", 0) > 0
-        # refined triage items wait for Stefan's review (assigned to him by assignee_sync), not for the Lead
-        if (status == "Triage" and c.get("state") == "OPEN" and not is_sprint_doc(c) and not (task_refined or feature_split)
-                and datetime.now(timezone.utc) - datetime.fromisoformat(c["createdAt"].replace("Z", "+00:00")) > timedelta(hours=TRIAGE_HOURS)):
-            events[f"triage:{c['url']}"] = (f"Seit über {TRIAGE_HOURS} h in Triage – triagieren (Typ, Parent, verfeinern oder Frage an Stefan, dann Backlog): {c['repository']['name']}#{c['number']} {c['title'][:80]} {c['url']}")
-        if status in ("Ready", "In Progress") and c.get("state") == "OPEN":
-            busy.add((node.get("instance") or {}).get("name"))
-        if status in ("In Progress", "In review") and c.get("state") == "OPEN" and (
-                not it or not (datetime.fromisoformat(it["startDate"]).date() <= today
-                               < datetime.fromisoformat(it["startDate"]).date() + timedelta(days=it["duration"]))):
-            events[f"no-iteration:{c['url']}"] = (f"{status} ohne aktuelle Iteration – nur Stefan plant den Sprint, nichts am Sprint vorbei starten: {c['repository']['name']}#{c['number']} {c['title'][:70]} {c['url']}")
-        if not it or not c or (c.get("issueType") or {}).get("name") == "Feature":
-            continue  # features never go into a sprint
-        start = datetime.fromisoformat(it["startDate"]).date()
-        end = start + timedelta(days=it["duration"])
-        if start <= today < end and today == end - timedelta(days=1):
-            open_items = sprint_end.setdefault(it["title"], [])
-            if c.get("state") == "OPEN":
-                open_items.append(f"{c['repository']['name']}#{c['number']} {c['title'][:50]} ({status or '-'})")
-        if c.get("state") != "OPEN":
-            continue
-        # A task of the running iteration can hang on a blocker outside it. Such a blocker appears in no
-        # sprint list, so the sprint stands still and the watch reports nothing to do (#24, #28).
-        if (start <= today < end and (c.get("issueDependenciesSummary") or {}).get("blockedBy")
-                and (c.get("repository") or {}).get("nameWithOwner")):
-            for blocker in blockers_outside_iteration(c["number"], c["repository"]["nameWithOwner"]):
-                events[f"plan:{c['url']}:{blocker}"] = (
-                    f"plan: ⛔ #{c['number']} hängt an #{blocker}, das nicht in der Iteration ist — "
-                    f"in den Sprint ziehen oder entblocken: {c['url']}")
-        # refined = has the task order's Branch line; refined but blocked tasks wait in Backlog on purpose
-        refined = re.search(r"Branch:\s*`[^`]+`", c.get("body") or "") is not None
-        startable = (refined and status == "Backlog" and (c.get("issueType") or {}).get("name") != "Feature"
-                     and not (c.get("issueDependenciesSummary") or {}).get("blockedBy"))
-        if start <= today < end and startable:
-            events[f"sprint:{c['url']}"] = (f"Neu im Sprint ({it['title']}), noch nicht verfeinert: "
-                                            f"{c['repository']['name']}#{c['number']} {c['title'][:80]} "
-                                            f"[verfeinert: Ready setzen oder blocked-by eintragen] {c['url']}")
-        if start <= today < end and status in (None, "Triage", "Backlog") and not refined:
-            refinable += 1
-            events[f"sprint:{c['url']}"] = (f"Neu im Sprint ({it['title']}), noch nicht verfeinert: "
-                                            f"{c['repository']['name']}#{c['number']} {c['title'][:80]} {c['url']}")
-    if not page["pageInfo"]["hasNextPage"]:
-        break
-    after = page["pageInfo"]["endCursor"]
-for inst in os.environ.get("DEV_INSTANCES", "dev-1").split():
-    if inst not in busy and refinable:
-        events[f"idle:{inst}"] = (f"Instanz {inst} ist frei, aber in der aktuellen Iteration ist kein Task Ready "
-                                  f"({refinable} noch nicht verfeinert) – Sprint-Planning fortsetzen")
-for title, open_items in sprint_end.items():
-    rest = (f"noch offen ({len(open_items)}): " + "; ".join(open_items)) if open_items else "alles erledigt"
-    events[f"sprint-end:{title}"] = (f"Sprint {title} endet heute, {rest} – Review-Issue in .github anlegen, "
-                                     "Stefan vorschlagen, was in die nächste Iteration geht")
-
-items = json.loads(gh("project", "item-list", project, "--owner", org, "--format", "json", "-L", "1000"))["items"]
-now = datetime.now(timezone.utc)
-for i in items:
-    c = i.get("content", {})
-    if i.get("status") != "In Progress" or c.get("type") != "Issue":
-        continue
-    issue = json.loads(gh("issue", "view", str(c["number"]), "-R", c["repository"], "--json", "updatedAt,closedByPullRequestsReferences"))
-    upd = datetime.fromisoformat(issue["updatedAt"].replace("Z", "+00:00"))
-    if not issue.get("closedByPullRequestsReferences") and now - upd > timedelta(hours=float(stale_h)):
-        events[f"stale:{c['url']}"] = f"Hängt seit >{stale_h} h in In Progress ohne PR ({i.get('instance')}): {c['url']}"
-
-state_p, snap_p = cache / "github-watch-state.json", cache / "github-watch.md"
-# State = {event: last time it was printed}. A bot-chat delivery can fail (SESSION_NOT_OWNED while the
-# Lead session is busy) and the script cannot see that, so an event that is still open is printed again
-# after REMIND_MINUTES instead of being reported only once.
-REMIND_MINUTES = 60
-try:
-    prev = json.loads(state_p.read_text())
-except (FileNotFoundError, json.JSONDecodeError):
-    prev = {}
-if isinstance(prev, list):  # old format: list of already reported keys
-    prev = {k: now.isoformat() for k in prev}
-snap_p.write_text(f"# GitHub watch — {now.isoformat(timespec='seconds')}\n\n" +
-                  ("\n".join(events.values()) if events else "nichts offen") + "\n")
-SPRINT_REMIND_MINUTES = 20  # unrefined sprint tasks block the dev instances, so nag more often
+def card_events(node, events, now):
+    """Report one open card: the Lead's inbox and the states the assignee cannot show."""
+    c, status = node["content"], (node.get("status") or {}).get("name")
+    name = f"{slug(c)} {c['title'][:70]} {c['url']}"
+    prs = [p["number"] for p in c["closedByPullRequestsReferences"]["nodes"]]
+    assignees = {a["login"] for a in c["assignees"]["nodes"]}
+    comment = (c["comments"]["nodes"] or [None])[-1]
+    assigned = (c["timelineItems"]["nodes"] or [None])[-1]
+    if comment and login(comment) == owner and lead in assignees:
+        events[f"owner-comment:{comment['id']}"] = f"Inbox – Stefan hat kommentiert: {name}"
+    answered = comment and login(comment) == lead and assigned and comment["createdAt"] > assigned["createdAt"]
+    if assigned and login(assigned) == owner and (assigned.get("assignee") or {}).get("login") == lead and not answered:
+        events[f"owner-assigned:{assigned['id']}"] = f"Inbox – Stefan hat dir das zugewiesen: {name}"
+    age = now - datetime.fromisoformat(c["createdAt"].replace("Z", "+00:00"))
+    if status == "Triage" and not is_doc(c) and not refined(c) and age > timedelta(hours=TRIAGE_HOURS):
+        events[f"triage:{c['url']}"] = f"Inbox – seit über {TRIAGE_HOURS} h in Triage, verfeinern: {name}"
+    if status == "Triage" and prs:
+        events[f"triage-pr:{c['url']}"] = f"PR #{prs[0]} zu einer Triage-Karte, die nicht begonnen werden darf: {name}"
+    if status == "Verify" and not prs:
+        events[f"board:{c['url']}"] = f"board: ⚠️ steht auf Verify ohne verlinkten PR: {name}"
+    idle = now - datetime.fromisoformat(c["updatedAt"].replace("Z", "+00:00"))
+    if status == "Action" and not prs and idle > timedelta(hours=float(stale_h)):
+        instance = (node.get("instance") or {}).get("name")
+        events[f"stale:{c['url']}"] = f"Hängt seit >{stale_h} h auf Action ohne PR ({instance}): {name}"
 
 
-def is_due(key: str, last: str | None) -> bool:
-    """New events are due; open ones again after their reminder interval; sprint-end only once."""
+def post_merge_events(events, today):
+    """The Lead reviews a merged .github PR afterwards: that repository is the outer loop."""
+    since = (today - timedelta(days=1)).isoformat()
+    merged = json.loads(gh("search", "prs", "--repo", f"{org}/{OUTER_LOOP_REPO}", "--merged", "--merged-at", f">={since}",
+                           "--json", "url,number,title"))
+    for pr in merged:
+        events[f"postmerge:{pr['url']}"] = f"Inbox – nach dem Merge prüfen: #{pr['number']} {pr['title'][:70]} {pr['url']}"
+
+
+def is_due(key, last, now):
     if last is None:
         return True
-    if key.startswith("sprint-end:"):
+    if key.startswith(ONCE):
         return False
-    minutes = SPRINT_REMIND_MINUTES if key.startswith("sprint:") else REMIND_MINUTES
-    return now - datetime.fromisoformat(last) > timedelta(minutes=minutes)
+    return now - datetime.fromisoformat(last) > timedelta(minutes=REMIND_MINUTES)
 
 
-state, planning = {}, []
-for k, msg in events.items():
-    last = prev.get(k)
-    if k.startswith("orphan:"):
-        # Once per PR and no reminder: the key lives as long as the body lacks the line and disappears with it
-        # (state is rebuilt from `events` every run), so an edited body silences the next run (#16).
-        state[k] = last or now.isoformat()
-        if last is None:
-            print(msg)
-        continue
-    due = is_due(k, last)
-    state[k] = now.isoformat() if due else last
-    if not due:
-        continue
-    if k.startswith("sprint:"):  # bundled below: sprint planning covers all tasks in one run
-        planning.append(msg.split("noch nicht verfeinert: ", 1)[-1])
-    else:
-        print(msg if last is None else f"Erinnerung: {msg}")
-if planning:
-    unrefined = [m.split("noch nicht verfeinert: ", 1)[-1] for k, m in events.items() if k.startswith("sprint:")]
-    print(f"Sprint-Planning nötig: {len(unrefined)} Tasks der aktuellen Iteration brauchen dich (verfeinern bzw. Ready setzen). "
-          "Alle in EINEM Lauf planen (Abschnitt 5, Sprint-Planning):\n- " + "\n- ".join(unrefined))
-# Stefan's "changes requested" (Sprint 1 retro): the PR's review decision is not enough - it also covers a
-# dismissed or stale state, so only his latest review counts. One report per review id; a review that no longer
-# sits on the head commit is answered (the Lead pushed) and gets no reminder. An APPROVED writes no key, which
-# clears the remembered id.
-CHANGES_WAIT_HOURS, CHANGES_REPEAT_HOURS = 2, 24
-for pr in waiting["data"]["search"]["nodes"]:
-    own = [r for r in pr["reviews"]["nodes"] if (r["author"] or {}).get("login") == owner]
-    if not own or own[-1]["state"] != "CHANGES_REQUESTED":
-        continue
-    review = own[-1]
-    key = f"changes_requested:{pr['url']}"
-    marked = prev.get(f"{key}:reminded") or {}
-    if isinstance(marked, str):  # a bare timestamp is enough for the first reminder
-        marked = {"at": marked}
-    sent = int(marked.get("reminders", 0))
-    at = datetime.fromisoformat(marked["at"]) if marked.get("at") else now
-    line = (f"review: 📝 Stefan hat Änderungen verlangt: {pr['repository']['name']}#{pr['number']} "
-            f"— {pr['title'][:80]} {pr['url']}")
-    first = next((ln.strip() for ln in (review.get("body") or "").splitlines() if ln.strip()), "")
-    if first:
-        line += f"\n  {first[:200]}"
-    if prev.get(key) != review["id"]:  # a new review id is a new event
-        print(line)
-        sent, at = 0, now
-    elif ((review.get("commit") or {}).get("oid") == pr["headRefOid"]
-          and now - at >= timedelta(hours=CHANGES_REPEAT_HOURS if sent else CHANGES_WAIT_HOURS)):
-        print(f"Erinnerung: {line}")
-        sent += 1
-        at = now
-    state[key] = review["id"]
-    state[f"{key}:reminded"] = {"at": at.isoformat(), "reminders": sent}
-state_p.write_text(json.dumps(state, sort_keys=True))
+def collect(today):
+    """Return all current events."""
+    events = {}
+    prs = json.loads(gh("api", "graphql", "-f", f"query={PR_QUERY}", "-f", f"q=is:pr is:open org:{org}"))
+    prs = prs["data"]["search"]["nodes"]
+    pr_events(prs, events)
+    remind_owner(prs, events)
+    add_missing(events)
+    now = datetime.now(timezone.utc)
+    for node in board_items():
+        card_events(node, events, now)
+    post_merge_events(events, today)
+    days = (today - RETRO_START).days
+    if days >= 0 and days % RETRO_DAYS == 0:
+        events[f"retro:{today}"] = f"Retro fällig: Issue „Retro {today}“ in .github anlegen (PROCESS.md, Continuous improvement)"
+    return events
+
+
+def budget_notice(now):
+    """Say once an hour that the run was skipped, instead of a traceback every ten minutes."""
+    path = cache / BUDGET_STATE
+    try:
+        last = datetime.fromisoformat(path.read_text().strip())
+    except (FileNotFoundError, ValueError):
+        last = None
+    if last is None or now - last > timedelta(minutes=REMIND_MINUTES):
+        print("GitHub-GraphQL-Budget des Lead-Tokens ist aufgebraucht: Watch und Dispatcher pausieren bis zum Reset.")
+        path.write_text(now.isoformat())
+
+
+def main():
+    today = (date.fromisoformat(os.environ["WATCH_TODAY"]) if os.environ.get("WATCH_TODAY")
+             else datetime.now(ZoneInfo("Europe/Vienna")).date())
+    now = datetime.now(timezone.utc)
+    try:
+        events = collect(today)
+    except BudgetExhausted:
+        budget_notice(now)
+        return
+    state_p, snap_p = cache / "github-watch-state.json", cache / "github-watch.md"
+    try:
+        prev = json.loads(state_p.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        prev = {}
+    snap_p.write_text(f"# GitHub watch — {now.isoformat(timespec='seconds')}\n\n" +
+                      ("\n".join(events.values()) if events else "nichts offen") + "\n")
+    state = {}
+    for key, message in events.items():
+        last = prev.get(key)
+        due = is_due(key, last, now)
+        state[key] = now.isoformat() if due else last
+        if due:
+            print(message if last is None else f"Erinnerung: {message}")
+    state_p.write_text(json.dumps(state, sort_keys=True))
+
+
+main()
 PY
 
 # Assignee = whoever acts next (PROCESS.md). Changes go to a log, not to the Lead; a failure is reported.
-SYNC="$PROFILE_DIR/skills/personal/sw-lead-workflow/scripts/assignee_sync.py"
+SYNC="$PROFILE_DIR/scripts/assignee_sync.py"
 if ! python3 "$SYNC" "$ORG" "$PROJECT" >> "$PROFILE_DIR/cache/assignee-sync.log" 2>&1; then
     echo "assignee-sync fehlgeschlagen, siehe cache/assignee-sync.log"
 fi
