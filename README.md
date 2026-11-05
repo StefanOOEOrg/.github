@@ -12,5 +12,7 @@ Organization-wide community health files for `StefanOOEOrg`.
   repository is public.
 - [`assets/`](assets/) — the swimlane diagrams embedded in `PROCESS.md` and `CONTRIBUTING.md`;
   generated, not hand-edited.
+- [`tools/`](tools/) — the automation that runs the process (watch, dispatcher, assignee sync,
+  diagram generators); `tools/install.sh` copies it into a Hermes profile.
 
 Changes go through a pull request, like code.

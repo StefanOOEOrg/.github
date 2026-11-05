@@ -1,0 +1,10 @@
+# Lint configuration for the copied process automation.
+#
+# These files are byte-identical copies of what runs in the Lead profile (see README.md) and are
+# deliberately not reformatted here: a style-only edit would break the hash proof and hide real
+# changes in noise. ISC004 fires on two implicitly concatenated f-strings in `swimlane_svg.py`;
+# the strings are intentional (a single SVG tag split over two lines) and changing them would be a
+# code change to a copied file.
+
+[lint.per-file-ignores]
+"swimlane_svg.py" = ["ISC004"]

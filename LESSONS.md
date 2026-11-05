@@ -24,3 +24,5 @@ Every process correction gets a line here (same PR as the correction, or a docs 
 | 2026-11-02 | Required check blocked (mcp-garmin#21) | duplicate CI runs on one commit after a cancelled re-run | merged by the product owner | watch |
 | 2026-11-03 | Image analysis failed in the personal agents | auxiliary models without their own base_url | base_url per auxiliary task | done |
 | 2026-11-03 | Product owner's 'changes requested' not noticed by the Lead | github-watch had no such event | – | open |
+| 2026-11-04 | Process automation changed without review, two copies drifted | the scripts lived in a profile directory: no PR, no history, and the cron ran a second copy | `tools/` in `.github`, installed by the idempotent `tools/install.sh` | done |
+| 2026-11-04 | Alerts reached the Lead truncated | delivery waited for the session, the old 600 s limit cut it | `cron.bot_chat_delivery_timeout_seconds` 1800 and the degraded-delivery notice is expected | done |
