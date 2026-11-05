@@ -5,7 +5,7 @@ Every process correction gets a line here (same PR as the correction, or a docs 
 | Date | Problem | Cause | Measure | Status |
 |---|---|---|---|---|
 | 2026-11-05 | `tools/install.sh` reported six `copied` for an install into a nested path nobody reads (#29) | default profiles root derived from `HERMES_HOME`, which is the profile directory inside the agent runtime | default is `$HERMES_HOME/profiles` or `~/.hermes/profiles`; a profile-shaped `HERMES_HOME` is refused with a hint to `--profiles-root` | done |
-| 2026-11-05 | Sprint stalled: a decision in a comment did not reach the Lead (#24) | github-watch read states, not comments | Assignee = inbox: comments and manual assignments of the product owner are reported; manual assignment wins over the sync | open (#15) |
+| 2026-11-05 | Sprint stalled: a decision in a comment did not reach the Lead (#24) | github-watch read states, not comments | Assignee = inbox: comments and manual assignments of the product owner are reported; manual assignment wins over the sync | done |
 | 2026-11-05 | Sprint stalled: task blocked by a task outside the iteration (#24) | blocker in Backlog without iteration or assignee | – | open |
 | 2026-11-04 | Local suite red after the version bump | stale editable package metadata (`uv sync` does not rebuild it from `VERSION`) | `uv sync --reinstall-package newstrading` in the release steps before the test run | done |
 | 2026-11-03 | Work started outside the process (#56/#57, PRs #62–#65) | retired Hermes Kanban still dispatched and auto-decomposed | Kanban dispatch and auto-decompose switched off; skill: no Kanban cards | done |
@@ -24,6 +24,6 @@ Every process correction gets a line here (same PR as the correction, or a docs 
 | 2026-11-02 | `gh pr edit --add-reviewer` silently failed | gh 2.45 bug (Projects classic) | REST call in the skills, gh 2.103 | done |
 | 2026-11-02 | Required check blocked (mcp-garmin#21) | duplicate CI runs on one commit after a cancelled re-run | merged by the product owner | watch |
 | 2026-11-03 | Image analysis failed in the personal agents | auxiliary models without their own base_url | base_url per auxiliary task | done |
-| 2026-11-03 | Product owner's 'changes requested' not noticed by the Lead | github-watch had no such event | – | open |
+| 2026-11-03 | Product owner's 'changes requested' not noticed by the Lead | github-watch had no such event | watch reports his latest review with changes requested (once per review id, reminder after 2 h and 24 h); a manual assignment of his also wins in Triage, Backlog and In review | done |
 | 2026-11-04 | Process automation changed without review, two copies drifted | the scripts lived in a profile directory: no PR, no history, and the cron ran a second copy | `tools/` in `.github`, installed by the idempotent `tools/install.sh` | done |
 | 2026-11-04 | Alerts reached the Lead truncated | delivery waited for the session, the old 600 s limit cut it | `cron.bot_chat_delivery_timeout_seconds` 1800 and the degraded-delivery notice is expected | done |
