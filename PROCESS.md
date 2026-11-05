@@ -62,6 +62,8 @@ Assignee = whoever acts next (kept up to date by a script every 10 minutes):
 - Product owner approved: Lead (merge)
 - Closed: nobody
 
+**Assignee = inbox.** Everything assigned to you is your next step. Decisions are written as comments: a comment of the product owner on an item assigned to the Lead, or a manual assignment to the Lead, reaches the Lead automatically. A manual assignment by the product owner wins over the automatic rule while the item is in Triage, Backlog or In review.
+
 ### Project workflows
 
 - Item added → **Triage**; item reopened → **Triage**
@@ -94,7 +96,7 @@ Independent tasks run in parallel on different instances. Dependent tasks stay s
 - **Everyone:** the filter `assignee:@me` lists everything waiting for you.
 - **Product owner:** GitHub Mobile – review requests and `@StefanOOE` mentions.
 - **Product owner:** a reminder comment on a PR that has waited more than 2 h only for the product owner's approval (repeated after 24 h at the earliest).
-- **Lead:** a watcher reports new review requests, approvals ready to merge, tasks stuck *In Progress*, approved PRs without a review request to the product owner, sprint planning needed (unrefined or startable tasks of the iteration), idle instances, items longer than 2 h in Triage, PRs for Triage items, work outside the current iteration and the last day of an iteration. Open reports are repeated (20–60 min).
+- **Lead:** a watcher reports new review requests, inbox items (comments and manual assignments of the product owner) (planned in #15), approvals ready to merge, tasks stuck *In Progress*, approved PRs without a review request to the product owner, sprint planning needed (unrefined or startable tasks of the iteration), idle instances, items longer than 2 h in Triage, PRs for Triage items, work outside the current iteration and the last day of an iteration. Open reports are repeated (20–60 min).
 - **Delivery:** a delivery waits up to `cron.bot_chat_delivery_timeout_seconds` (1800 s) for the session that receives it. A turn that runs longer than that gets a degraded-delivery notice instead of a truncated report – that notice is expected; the full output stays in `cron/output/<job>/` and is listed by `hermes cron runs`.
 - **Chat** is used only for clarifying requirements; the outcome is written into the issue.
 
