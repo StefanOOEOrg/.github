@@ -1,6 +1,6 @@
 # Development Process
 
-How StefanOOEOrg builds software: a small team of AI agents and one human product owner, working in Scrum on GitHub.
+How StefanOOEOrg builds software: a small team of AI agents and one human product owner, working in Kanban on GitHub with the terms of loop engineering: a goal with a termination condition, action, verification, a human gate.
 
 **Rule zero:** GitHub is the single source of truth. What is not in an issue, a pull request or the project board did not happen.
 
@@ -8,7 +8,7 @@ How StefanOOEOrg builds software: a small team of AI agents and one human produc
 
 | Role | GitHub identity | Responsibilities | Approves? |
 |---|---|---|---|
-| Product owner & architect | `StefanOOE` | Owns the backlog, plans sprints, reviews concepts and architecture, gives the **second** approval | Yes (2nd) |
+| Product owner & architect | `StefanOOE` | Owns the backlog, pulls cards onto Goal, reviews concepts and architecture, gives the **second** approval | Yes (2nd) |
 | Lead | `StefanOOELeadBot` | Refines features into tasks, estimates, writes test scaffolds, reviews every PR, merges | Yes (1st) |
 | Developer | `StefanOOEDevBot` | Implements one task per run (test-first), opens the PR | Never |
 | Specialist bots (planned) | own account or GitHub App | Privacy (GDPR) and security checks on PRs | Never – they report check runs |
@@ -20,13 +20,12 @@ Specialist bots never approve: the ruleset counts approvals per identity, so a s
 
 ## Artifacts
 
-| Scrum artifact | Lives in |
+| Artifact | Lives in |
 |---|---|
 | Product backlog | Org project **Product Backlog**, ordered by priority |
-| Feature (user story) | Issue of type **Feature** – goal, acceptance criteria, out of scope. Parent only, never in a sprint |
-| Task / Bug | Sub-issue of type **Task** or **Bug** – one developer run, one PR. The only sprint items. Small tasks and bugs may have no parent |
+| Feature (user story) | Issue of type **Feature** – goal, acceptance criteria, out of scope. Parent only, never started |
+| Task / Bug | Sub-issue of type **Task** or **Bug** – one developer run, one PR. The only cards that start. Small tasks and bugs may have no parent |
 | Steps | Checkboxes inside a task |
-| Sprint | Project field *Iteration* (2 weeks, used as a cap on scope) |
 | Estimate | Project field *Points* (1, 2, 3, 5 – complexity only; anything larger is split) |
 | Status | Project field *Status*, mostly set by workflows |
 | Report and review | PR description and formal GitHub review |
@@ -43,12 +42,11 @@ The automation that drives this process – `github-watch.sh`, `dev-dispatch.sh`
 
 | Field | Values | Set by |
 |---|---|---|
-| Status | Triage, Backlog, Ready, In Progress, In review, Done | workflows; Backlog: product owner; Ready: Lead |
-| Iteration | 2-week iterations | Product owner only; the parts of a split inherit it |
+| Status | Triage, Backlog, Goal, Action, Verify, Done | workflows; Backlog and Goal: product owner; Action: dispatcher |
 | Points | 1, 2, 3, 5 | Lead |
 | Priority | Urgent, High, Medium, Low | Product owner, Lead |
 | Topic | free text | Lead |
-| Instance | dev-1, dev-2, … | Lead (on hand-over) |
+| Instance | dev-1, dev-2, … | Dispatcher |
 | Assignee | exactly one: whoever acts next | assignee sync script, Lead |
 
 Assignee = whoever acts next, on the card **and** on its PR (kept up to date by a script every 10 minutes):
@@ -57,24 +55,23 @@ Assignee = whoever acts next, on the card **and** on its PR (kept up to date by 
 |---|---|
 | Triage, not refined | Lead – or the product owner while a question to them is pending |
 | Triage, refined | Product owner (reviews the refinement) |
-| Backlog in the current iteration, not blocked | Lead (sprint planning) |
-| Backlog in the current iteration, blocked | Whoever acts next on the blocker |
-| Backlog outside the iteration, blocks a task of the iteration | Product owner (only they can pull it in) |
-| Other Backlog | Nobody: it waits to be pulled |
-| Ready / In Progress | Developer |
+| Backlog | Nobody: it waits to be pulled |
+| Backlog, blocks a card on Goal | Product owner (only they can pull it) |
+| Goal, blocked | Whoever acts next on the blocker; the product owner if the blocker is not on the board |
+| Goal / Action | Developer |
 | PR open, review requested from the Lead | Lead |
-| Lead requested changes | Developer |
+| Lead requested changes | Developer; after the third round the product owner |
 | Lead approved, product owner's review requested | Product owner |
 | Product owner approved | Lead (merge) |
 | Open without status, or Done but still open | Product owner: a gap the process must not hide |
 | Closed | Nobody |
 
-**Assignee = inbox.** Everything assigned to you is your next step. Decisions are written as comments: a comment of the product owner on an item assigned to the Lead, or a manual assignment to the Lead, reaches the Lead automatically. A manual assignment by the product owner wins over the automatic rule while the item is in Triage, Backlog or In review.
+**Assignee = inbox.** Everything assigned to you is your next step. Decisions are written as comments: a comment of the product owner on an item assigned to the Lead, or a manual assignment to the Lead, reaches the Lead automatically. A manual assignment by the product owner wins over the automatic rule while the item is in Triage, Backlog or Verify.
 
 ### Project workflows
 
 - Item added → **Triage**; item reopened → **Triage**
-- PR linked → **In review**
+- PR linked → **Verify**
 - PR merged / item closed → **Done**
 - Sub-issues are added automatically; closed items are archived after 14 days
 - Safety net: a watcher adds every open org issue that is missing from the project (status Triage), so no repository needs its own auto-add rule
@@ -87,16 +84,22 @@ Assignee = whoever acts next, on the card **and** on its PR (kept up to date by 
 </picture>
 
 1. **Intake** – Ideas become issues (feature, task or bug) in any repository. A watcher adds every open issue to the project in **Triage**.
-2. **Refinement (Lead)** – The Lead clarifies open points with the product owner, sets type and parent, splits each feature into task sub-issues – goal, acceptance criteria, scope (allowed files, test command), steps, points and a line ``Branch: `wp/<name>` (base: `main`)`` – and adds the feature's **closing task** *Acceptance and release vX.Y.Z*. The cards stay in Triage and are assigned to the product owner. Nothing in Triage is started.
-3. **Refinement review (product owner)** – The product owner reviews the refinement and moves the cards to **Backlog** and into the current **iteration** – or comments, and the card goes back to the Lead.
-4. **Sprint planning (Lead)** – One planning run over all items of the iteration: dependencies as *blocked by*, points, a parallel plan across the developer instances (no two parallel tasks on the same files), published as a *Sprint n plan* issue. Tasks without open dependencies get the Developer, an *Instance* and **Ready**. New work found during a sprint is only proposed in the plan; the product owner decides. The parts of an approved card that the Lead splits inherit its status and iteration; if the scope changes, they go through Triage to the product owner.
-5. **Implementation** – A dispatcher starts the first Ready task of the current iteration per free instance in a dedicated worktree and sets **In Progress**. The developer works test-first, commits, pushes and opens the PR with `Closes #<task>` and requests the Lead's review. Status moves to **In review**.
-6. **Review (Lead)** – A review starts from the generated pack and runs in a **fresh checker session** (see *Review context*): quality gates (CI, coverage, lint), mutation probes against "false green" tests, a formal GitHub review posted from the checker's verdict. *Request changes* sends the task back to Ready for the next round. On approval the Lead requests the product owner's review.
-7. **Approval and merge** – The product owner approves (a reminder comes after 2 h of waiting); the Lead merges. The task closes and moves to **Done**; merged predecessors unblock the next tasks.
+2. **Refinement (Lead)** – The Lead clarifies open points with the product owner, sets type and parent, splits each feature into task sub-issues – goal, acceptance criteria, scope (allowed files, test command), steps, points, dependencies as *blocked by* and a line ``Branch: `wp/<name>` (base: `main`)`` – and adds the feature's **closing task** *Acceptance and release vX.Y.Z*. The cards stay in Triage and are assigned to the product owner. Nothing in Triage is started. The parts of an approved card that the Lead splits inherit its status; if the scope changes, they go through Triage to the product owner.
+3. **Refinement review (product owner)** – The product owner reviews the refinement and moves the cards to **Backlog** – or comments, and the card goes back to the Lead.
+4. **Pull (product owner)** – A card moved onto **Goal** is released. Its acceptance criteria are the goal and its termination condition; the order in the column is the priority. What is pulled decides the review load: the developer instances cap the running work, the product owner caps what they have to review.
+5. **Action** – A dispatcher starts the first startable Goal card per free instance in a dedicated worktree: it sets instance, Developer and **Action**. A card with an open blocker stays on Goal and gets a comment with the reason, and the assignee moves to whoever acts next on the blocker. Files that overlap a running card wait for their turn. The developer works test-first, commits, pushes and opens the PR with `Closes #<task>` and requests the Lead's review. Status moves to **Verify**.
+6. **Verify (Lead)** – A review starts from the generated pack and runs in a **fresh checker session** (see *Review context*): quality gates (CI, coverage, lint), mutation probes against "false green" tests, a formal GitHub review posted from the checker's verdict. *Request changes* sends the task back to **Goal** for the next round. After the third round the task goes to the product owner with the open findings. On approval the Lead requests the product owner's review.
+7. **Human gate and merge** – The product owner approves (a reminder comes after 2 h of waiting); the Lead merges. The task closes and moves to **Done**; merged predecessors unblock the next tasks. The process runs at L2: a human gate on every merge.
 8. **Acceptance and release** – The product owner's approval of the closing task's PR (changelog, version, acceptance table per requirement) is the acceptance of the feature **and** the go for the release: the Lead tags `vX.Y.Z`, publishes the GitHub release and closes the feature.
-9. **Sprint end** – On the last day of an iteration the Lead writes a *Sprint n review* and a *Sprint n retro* issue (see Continuous improvement).
+9. **Retro** – Every two weeks, at a fixed rhythm (see Continuous improvement).
+
+*Planned, not active – second review by risk:* normal tasks merged by the Lead; the product owner for the round limit, scope, security, data, public interfaces, design questions and external PRs; the closing task reviews the full diff since the last tag. The decision follows the measurement over the 10 PRs after the fresh checker went live. The ruleset stays unchanged until then.
 
 Independent tasks run in parallel on different instances. Dependent tasks stay sequential ("blocked by"). Two instances never work on the same branch of the same repository.
+
+### The outer loop: this repository
+
+The process is not changed through the process. `.github` is the outer loop: the product owner and Claude maintain it directly – no board, no dispatcher, no Lead planning. Every change is a PR with history and updates this document, the diagrams and `LESSONS.md` in the same step. The product owner approves and merges as admin, the crons pause during the rollout, and the Lead reviews after the merge; a finding becomes a new PR. Incidents stay issues. Product repositories stay on the board.
 
 ### Review context
 
@@ -110,17 +113,17 @@ Independent tasks run in parallel on different instances. Dependent tasks stay s
 - **Everyone:** the filter `assignee:@me` lists everything waiting for you.
 - **Product owner:** GitHub Mobile – review requests, `@StefanOOE` mentions and the *Reviewer guide* in every PR (what and why, design decisions, risky spots, where to start reading).
 - **Product owner:** a reminder comment on a PR that has waited more than 2 h only for the product owner's approval (repeated after 24 h at the earliest).
-- **Lead:** a watcher reports new review requests, inbox items (comments and manual assignments of the product owner), approvals ready to merge, tasks stuck *In Progress*, approved PRs without a review request to the product owner, sprint planning needed (unrefined or startable tasks of the iteration), idle instances, items longer than 2 h in Triage, PRs for Triage items, work outside the current iteration and the last day of an iteration. Open reports are repeated (20–60 min). A review request is worked off from the review pack in a fresh checker session (*Review context*), not inside the Lead's long session.
+- **Lead:** a watcher reports the Lead's inbox – review requests, approvals ready to merge, changes wanted by the product owner, their comments and manual assignments, unrefined items older than 2 h in Triage – and what the assignee cannot show: tasks stalled on *Action*, *Verify* without a PR, PRs on Triage cards, PRs without a `Closes` line, issues missing from the project, merged `.github` PRs to review afterwards, and the retro. Open reports repeat every hour. A review request is worked off from the review pack in a fresh checker session (*Review context*), not inside the Lead's long session.
 - **Delivery:** a delivery waits up to `cron.bot_chat_delivery_timeout_seconds` (1800 s) for the session that receives it. A turn that runs longer than that gets a degraded-delivery notice instead of a truncated report – that notice is expected; the full output stays in `cron/output/<job>/` and is listed by `hermes cron runs`.
 - **Chat** is used only for clarifying requirements; the outcome is written into the issue.
 
 ## Continuous improvement
 
-- **Incidents:** whenever something stalls or bypasses the process, an issue with topic `process` records what happened, the cause, the immediate fix and the lasting measure. The lasting measure is a task that the product owner reviews like any other.
-- **Retro per sprint:** *Sprint n retro* with figures (time from Ready to merge, waiting time for the product owner's approval, review rounds, delayed notifications), what went well and what did not, and at most three improvements as tasks.
+- **Incidents:** whenever something stalls or bypasses the process, an issue with topic `process` records what happened, the cause, the immediate fix and the lasting measure. The lasting measure is a direct change in this repository (*The outer loop*).
+- **Retro every two weeks:** a *Retro YYYY-MM-DD* issue with figures (time from Goal to merge, waiting time for the product owner's approval, review rounds, delayed notifications), what went well and what did not, and at most three improvements. It also counts the findings the product owner raised after the Lead's approval, per PR, over the 10 PRs after the fresh checker went live – the basis for the decision on the second review.
 - **[LESSONS.md](LESSONS.md):** every process correction gets a line – date, problem, cause, measure, status.
 - **Documentation moves with the process:** every change to the process updates this document and the diagrams in the same step.
-- Plan, review and retro issues (`Sprint n …`) are documents and stay out of the project.
+- Retro issues (`Retro …`) are documents and stay out of the project.
 
 ## Quality gates
 
