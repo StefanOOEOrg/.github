@@ -163,16 +163,16 @@ def remind_owner(prs, events):
     path.write_text(json.dumps(reminded, sort_keys=True))
 
 
-def is_doc(issue):
-    """Sprint and retro issues in .github are documents, not work items."""
-    return issue["repository"]["name"] == OUTER_LOOP_REPO and issue["title"].startswith(("Sprint ", "Retro "))
+def off_board(issue):
+    """Issues in .github stay off the board: the outer loop is maintained directly."""
+    return issue["repository"]["name"] == OUTER_LOOP_REPO
 
 
 def add_missing(events):
     """Safety net: every open org issue belongs in the project (auto-add covers one repo per workflow only)."""
     found = json.loads(gh("api", "graphql", "-f", f"query={ISSUE_QUERY}",
                           "-f", f"q=is:issue is:open archived:false org:{org}"))["data"]["search"]["nodes"]
-    missing = [i for i in found if not is_doc(i)
+    missing = [i for i in found if not off_board(i)
                and str(project) not in {str(n["project"]["number"]) for n in i["projectItems"]["nodes"]}]
     if not missing or DRY_RUN:
         return
@@ -224,7 +224,7 @@ def card_events(node, events, now):
     if assigned and login(assigned) == owner and (assigned.get("assignee") or {}).get("login") == lead and not answered:
         events[f"owner-assigned:{assigned['id']}"] = f"Inbox – Stefan hat dir das zugewiesen: {name}"
     age = now - datetime.fromisoformat(c["createdAt"].replace("Z", "+00:00"))
-    if status == "Triage" and not is_doc(c) and not refined(c) and age > timedelta(hours=TRIAGE_HOURS):
+    if status == "Triage" and not off_board(c) and not refined(c) and age > timedelta(hours=TRIAGE_HOURS):
         events[f"triage:{c['url']}"] = f"Inbox – seit über {TRIAGE_HOURS} h in Triage, verfeinern: {name}"
     order = re.search(r"Branch:\s*`[^`]+`", c.get("body") or "") and "Allowed files:" in (c.get("body") or "")
     if status == "Goal" and not order and (c.get("issueType") or {}).get("name") != "Feature":
