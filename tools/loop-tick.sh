@@ -9,7 +9,8 @@
 # whole state again, so a lost or doubled event does no harm. Both hold their own lock, so a tick and
 # the old crons running in parallel never start a card or comment twice.
 # Hermes drops a trigger while the tick runs; the filter therefore stamps cache/tick-requested and
-# the tick runs again (at most MAX_ROUNDS) if a stamp is newer than its start.
+# the tick runs again (at most MAX_ROUNDS) if a stamp is newer than its start (same second = the
+# triggering event itself, no second round).
 #
 # stdout is the delivery payload: only the watch's Lead messages; the dispatcher logs locally.
 set -uo pipefail
@@ -27,7 +28,7 @@ for round in $(seq 1 "$MAX_ROUNDS"); do
   fi
   bash "$SCRIPTS/github-watch.sh" || echo "Tick: Watch fehlgeschlagen"
   requested=$(cat "$CACHE/tick-requested" 2>/dev/null || echo 0)
-  if [ "${requested:-0}" -lt "$start" ]; then
+  if [ "${requested:-0}" -le "$start" ]; then
     break
   fi
   echo "$(date -Is) Tick-Runde $((round + 1)): Ereignis während Runde $round" >> "$CACHE/dispatch-tick.log"
