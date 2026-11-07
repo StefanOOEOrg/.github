@@ -42,3 +42,14 @@ ARCHIVE_DAYS = 14  # Done and closed this long: archive the item
 # === PROPOSALS (off until decided) ===
 # Verify -> Action when the linked PR was closed without a merge (design doc: proposal, not in use).
 VERIFY_BACK_TO_ACTION = os.getenv("LOOP_VERIFY_BACK_TO_ACTION") == "1"
+
+# === PATHS (TC) ===
+PROFILE_DIR = os.getenv("HERMES_HOME", os.path.expanduser("~/.hermes/profiles/sw-lead"))
+CACHE_DIR = os.path.join(PROFILE_DIR, "cache")
+DEV_JOBS = os.getenv("DEV_JOBS", os.path.join(os.path.dirname(PROFILE_DIR), "sw-developer", "cron",
+                                              "jobs.json"))
+# one git clone per repository, the worktrees inside
+WS_ROOT = os.getenv("WS_ROOT", "/home/hermes/workspaces")
+DEV_PROFILE = "sw-developer"
+DEV_SKILL = "sw-developer-workflow"
+LOCK_WAIT_SECONDS = 600  # a second run waits for the first, then gives up quietly
