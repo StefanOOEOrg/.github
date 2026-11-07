@@ -36,7 +36,7 @@ fi
 
 python3 - "$ORG" "$PROJECT" "$INSTANCES" "$DEV_LOGIN" "$OWNER_LOGIN" "$WS_ROOT" "$PROFILE_DIR/cache" \
   "$DEV_JOBS" <<'PY'
-import fnmatch, json, os, re, subprocess, sys, time
+import calendar, fnmatch, json, os, re, subprocess, sys, time
 from pathlib import Path
 
 org, project, instances, dev_login, owner, ws_root, cache, dev_jobs = sys.argv[1:9]
@@ -51,7 +51,7 @@ GH_BACKOFF = (2, 5)  # seconds before the second and third attempt
 # Only what a dispatch needs: this runs 20 times an hour, so it must stay cheap (#44).
 ITEMS_QUERY = """query($org: String!, $num: Int!, $after: String) { organization(login: $org) { projectV2(number: $num) {
   id items(first: 100, after: $after) { pageInfo { hasNextPage endCursor } nodes { id
-    status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
+    status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name updatedAt } }
     instance: fieldValueByName(name: "Instance") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
     content { ... on Issue { id url number title state body issueType { name } repository { nameWithOwner }
       assignees(first: 3) { nodes { login } } blockedBy(first: 5) { nodes { number state } }
@@ -185,25 +185,19 @@ def start(pid, item, inst, fields):
         if step in ("setting instance and status", "creating the developer job"):
             set_field(pid, item, fields["Status"], "Goal")
         return step
-    print(f"{inst}: gestartet {repo_full}#{c['number']} ({branch}, Runde {rnd}){goal_to_action(c)}")
+    print(f"{inst}: gestartet {repo_full}#{c['number']} ({branch}, Runde {rnd}){goal_to_action(item)}")
     return None
 
 
-def goal_to_action(content):
-    """Log the seconds from the move to Goal (stamped by the webhook filter) to this start."""
-    path = Path(cache) / "goal-since.json"
-    try:
-        since = json.loads(path.read_text())
-    except (FileNotFoundError, json.JSONDecodeError):
+def goal_to_action(item):
+    """Log the seconds from the move to Goal to this start: the Status value's updatedAt is that move."""
+    moved = (item.get("status") or {}).get("updatedAt")
+    if not moved:
         return ""
-    moved = since.pop(content.get("id"), None)
-    if moved is None:
-        return ""
-    seconds = round(time.time() - moved)
-    path.write_text(json.dumps(since, sort_keys=True))
+    seconds = round(time.time() - calendar.timegm(time.strptime(moved, "%Y-%m-%dT%H:%M:%SZ")))
+    c = item["content"]
     with (Path(cache) / "goal-to-action.log").open("a") as log:
-        log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} {content['repository']['nameWithOwner']}#"
-                  f"{content['number']} {seconds}\n")
+        log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} {c['repository']['nameWithOwner']}#{c['number']} {seconds}\n")
     return f", Goal→Action {seconds} s"
 
 
