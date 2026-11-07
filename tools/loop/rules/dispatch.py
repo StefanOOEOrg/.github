@@ -1,0 +1,94 @@
+"""dispatch(board): which Goal card starts on which free instance (D1, D3..D9).
+
+A decision about the whole board: free instances, overlapping Allowed files and the order of the
+Goal column belong to it. Stuck Action cards (D2, see checks) no longer hold their instance.
+"""
+
+from __future__ import annotations
+
+import fnmatch
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field
+from datetime import datetime
+
+from loop import config
+from loop.model import Board, Card
+from loop.rules.checks import is_stuck
+
+
+@dataclass(frozen=True)
+class Start:
+    """Start this card on this instance."""
+
+    card: Card
+    instance: str
+
+
+@dataclass
+class Dispatch:
+    """The dispatcher's decisions for one run."""
+
+    starts: list[Start] = field(default_factory=list)
+    blocked: list[tuple[Card, str]] = field(default_factory=list)  # (card, reason): comment once
+    waiting: list[Card] = field(default_factory=list)  # overlap or no free instance: silent
+
+
+def overlaps(first: Iterable[str], second: Iterable[str]) -> bool:
+    """True if two lists of paths or globs can touch the same file (D8)."""
+    second = tuple(second)
+    return any(a == b or fnmatch.fnmatch(a, b) or fnmatch.fnmatch(b, a)
+               for a in first for b in second)
+
+
+def why_not(card: Card, access: Callable[[str], str | None]) -> str | None:
+    """The reason a Goal card cannot start, independent of the other cards (D4, D6, D7, D9)."""
+    if card.task.is_feature:
+        return "a feature is never started, pull its tasks"  # D4
+    blockers = card.open_blockers
+    if blockers:
+        return "blocked by " + ", ".join(f"#{b.number}" for b in blockers)  # D6
+    if not card.task.has_order:
+        return "the task has no `Branch:` or no `Allowed files` line"  # D7
+    return access(card.ref.repo)  # D9: None when both bots can write
+
+
+def held_by_owner(card: Card) -> bool:
+    """D5: the round limit handed it to the owner, who decides."""
+    return config.OWNER in card.assignees and bool(card.open_prs)
+
+
+def dispatch(board: Board, jobs: set[str] | None, now: datetime,
+             access: Callable[[str], str | None]) -> Dispatch:
+    """Decide the starts of this run.
+
+    Args:
+        board: The board in its order.
+        jobs: Names of the scheduled developer jobs, None if unknown (then nothing is stuck).
+        now: The time of the run.
+        access: Repo -> None if both bots can write, else the reason (D9).
+
+    Returns:
+        Starts, blocked cards with their reason, and silently waiting cards.
+    """
+    active = [c for c in board.cards if c.state.is_open and c.state.status == "Action"
+              and not is_stuck(c, jobs, now)]
+    busy = {c.state.instance for c in active}
+    free = [i for i in config.INSTANCES if i not in busy]  # D1
+    running = [(c.ref.repo, c.task.allowed_files) for c in active]
+    result = Dispatch()
+    for card in (c for c in board.cards if c.state.is_open and c.state.status == "Goal"):  # D3
+        if held_by_owner(card):
+            continue
+        reason = why_not(card, access)
+        if reason:
+            result.blocked.append((card, reason))
+            continue
+        files = card.task.allowed_files
+        if not free or any(r == card.ref.repo and overlaps(files, o) for r, o in running):
+            result.waiting.append(card)  # D8 or no free instance
+            continue
+        inst = card.state.instance if card.state.instance in free else free[0]
+        result.starts.append(Start(card, inst))
+        free.remove(inst)
+        running.append((card.ref.repo, files))
+    return result
