@@ -9,7 +9,10 @@
 # and Developer are set, a worktree is prepared and a one-shot developer job starts.
 # A card that cannot start stays on Goal: an open blocker or a missing Branch / Allowed files line gets
 # one comment with the reason (the assignee sync then puts it in the right inbox); a card whose files
-# overlap an Action card waits silently for its turn.
+# overlap an Action card waits silently for its turn. A card starts only if both bots can write to its
+# repository, and it reaches Action only together with its developer job: a failed start puts it back
+# on Goal with a comment (#57). An Action card without a PR and without a scheduled developer job for
+# IDLE_MINUTES is reported once and handed to the product owner; it no longer holds its instance.
 # Action -> Verify is done by the project workflow when the PR is linked.
 #
 # stdout is the delivery payload (local log); empty = nothing dispatched.
@@ -23,14 +26,18 @@ DEV_LOGIN="${DEV_LOGIN:-StefanOOEDevBot}"
 OWNER_LOGIN="${OWNER_LOGIN:-StefanOOE}"
 WS_ROOT="${WS_ROOT:-/home/hermes/workspaces}"
 PROFILE_DIR="${HERMES_HOME:-$HOME/.hermes/profiles/sw-lead}"
+DEV_JOBS="${DEV_JOBS:-$(dirname "$PROFILE_DIR")/sw-developer/cron/jobs.json}"
 mkdir -p "$PROFILE_DIR/cache"
 
-python3 - "$ORG" "$PROJECT" "$INSTANCES" "$DEV_LOGIN" "$OWNER_LOGIN" "$WS_ROOT" "$PROFILE_DIR/cache" <<'PY'
+python3 - "$ORG" "$PROJECT" "$INSTANCES" "$DEV_LOGIN" "$OWNER_LOGIN" "$WS_ROOT" "$PROFILE_DIR/cache" \
+  "$DEV_JOBS" <<'PY'
 import fnmatch, json, os, re, subprocess, sys, time
 from pathlib import Path
 
-org, project, instances, dev_login, owner, ws_root, cache = sys.argv[1:8]
+org, project, instances, dev_login, owner, ws_root, cache, dev_jobs = sys.argv[1:9]
 DRY_RUN = os.environ.get("DISPATCH_DRY_RUN") == "1"
+IDLE_MINUTES = 15  # an Action card without PR and developer job this long is reported (#57)
+WRITE = ("admin", "maintain", "write")
 
 GH_TIMEOUT = 60  # seconds per gh call; a hung call must not block the cron run
 GH_ATTEMPTS = 3  # GitHub answers 502/504 on project queries now and then; retry them
@@ -113,47 +120,128 @@ def set_field(pid, item, field, value):
        "--single-select-option-id", option)
 
 
+def write_access(repo_full, cache_):
+    """Return None if both bots can write to the repository, else the reason it cannot start."""
+    if repo_full not in cache_:
+        try:
+            lead = json.loads(gh("api", f"repos/{repo_full}")).get("permissions") or {}
+            dev = json.loads(gh("api", f"repos/{repo_full}/collaborators/{dev_login}/permission"))
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+            print(f"Rechte nicht lesbar: {repo_full}: {(getattr(error, 'stderr', None) or error)!s:.200}")
+            cache_[repo_full] = f"the bot permissions on {repo_full} cannot be read"
+            return cache_[repo_full]
+        missing = [who for who, ok in (("the Lead bot", lead.get("push")),
+                                       (dev_login, dev.get("permission") in WRITE)) if not ok]
+        cache_[repo_full] = f"{' and '.join(missing)} cannot write to {repo_full}" if missing else None
+    return cache_[repo_full]
+
+
 def start(pid, item, inst, fields):
-    """Move one card to Action on an instance and start the one-shot developer job."""
+    """Move one card to Action on an instance together with its one-shot developer job.
+
+    Returns None on success, else the step that failed; the card is then back on Goal (#57).
+    """
     c = item["content"]
     repo_full, repo = c["repository"]["nameWithOwner"], c["repository"]["nameWithOwner"].split("/")[-1]
     m = re.search(r"Branch:\s*`([^`]+)`(?:\s*\(base:\s*`([^`]+)`\))?", c["body"] or "")
     branch, base = m.group(1), (m.group(2) or "main")
     if DRY_RUN:
         print(f"{inst}: would start {repo_full}#{c['number']} ({branch})")
-        return
+        return None
     ws = f"{ws_root}/{repo}"
     wt = f"{ws}/.worktrees/{inst}"
-    subprocess.run(["git", "-C", ws, "fetch", "-q", "upstream"], check=True)
-    exists = subprocess.run(["git", "-C", ws, "rev-parse", "-q", "--verify", f"upstream/{branch}"],
-                            capture_output=True).returncode == 0
-    origin = f"upstream/{branch}" if exists else (base if base.startswith("upstream/") else f"upstream/{base}")
-    subprocess.run(["git", "-C", ws, "worktree", "remove", "--force", wt], capture_output=True)
-    subprocess.run(["git", "-C", ws, "worktree", "add", "-q", "-B", branch, wt, origin], check=True)
-    set_field(pid, item, fields["Instance"], inst)
-    set_field(pid, item, fields["Status"], "Action")
-    gh("api", "-X", "POST", f"repos/{repo_full}/issues/{c['number']}/assignees", "-f", f"assignees[]={dev_login}")
-    rnd = "2+" if exists else "1"
-    prompt = (f"Implement task {c['url']} (repo {repo_full}, instance {inst}, round {rnd}). "
-              f"Work only in {wt} on branch {branch}. Follow skill sw-developer-workflow; the issue body is the order.")
-    subprocess.run(["hermes", "-p", "sw-developer", "cron", "create", "1m", prompt, "--repeat", "1",
-                    "--name", f"{inst}-{repo}-{c['number']}", "--skill", "sw-developer-workflow",
-                    "--workdir", wt, "--deliver", "bot-chat:sw-lead", "--failure-deliver", "bot-chat:sw-lead"],
-                   check=True)
+    step = "preparing the worktree"
+    try:
+        subprocess.run(["git", "-C", ws, "fetch", "-q", "upstream"], check=True, capture_output=True, text=True)
+        exists = subprocess.run(["git", "-C", ws, "rev-parse", "-q", "--verify", f"upstream/{branch}"],
+                                capture_output=True).returncode == 0
+        origin = f"upstream/{branch}" if exists else (base if base.startswith("upstream/") else f"upstream/{base}")
+        subprocess.run(["git", "-C", ws, "worktree", "remove", "--force", wt], capture_output=True)
+        subprocess.run(["git", "-C", ws, "worktree", "add", "-q", "-B", branch, wt, origin], check=True,
+                       capture_output=True, text=True)
+        step = "assigning the developer"
+        gh("api", "-X", "POST", f"repos/{repo_full}/issues/{c['number']}/assignees", "-f", f"assignees[]={dev_login}")
+        if owner in {a["login"] for a in c["assignees"]["nodes"]}:  # a restart after the owner held it
+            gh("api", "-X", "DELETE", f"repos/{repo_full}/issues/{c['number']}/assignees", "-f", f"assignees[]={owner}")
+        step = "setting instance and status"
+        set_field(pid, item, fields["Instance"], inst)
+        set_field(pid, item, fields["Status"], "Action")
+        step = "creating the developer job"
+        rnd = "2+" if exists else "1"
+        prompt = (f"Implement task {c['url']} (repo {repo_full}, instance {inst}, round {rnd}). "
+                  f"Work only in {wt} on branch {branch}. Follow skill sw-developer-workflow; the issue body is the order.")
+        subprocess.run(["hermes", "-p", "sw-developer", "cron", "create", "1m", prompt, "--repeat", "1",
+                        "--name", f"{inst}-{repo}-{c['number']}", "--skill", "sw-developer-workflow",
+                        "--workdir", wt, "--deliver", "bot-chat:sw-lead", "--failure-deliver", "bot-chat:sw-lead"],
+                       check=True, capture_output=True, text=True)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as error:
+        detail = (getattr(error, "stderr", None) or str(error)).strip().splitlines()[-1:]
+        print(f"{inst}: Start fehlgeschlagen {repo_full}#{c['number']} beim {step}: {' '.join(detail)}")
+        if step in ("setting instance and status", "creating the developer job"):
+            set_field(pid, item, fields["Status"], "Goal")
+        return step
     print(f"{inst}: gestartet {repo_full}#{c['number']} ({branch}, Runde {rnd})")
+    return None
 
 
-def report(item, reason, seen, reported):
-    """Comment once on a card that cannot start; the reason stays until it is gone."""
+def scheduled_jobs():
+    """Return the names of the developer jobs that are still scheduled, or None if unknown."""
+    try:
+        jobs = json.loads(Path(dev_jobs).read_text()).get("jobs") or []
+    except (OSError, json.JSONDecodeError):
+        return None
+    return {j.get("name") or "" for j in jobs if j.get("enabled")}
+
+
+def idle(item, jobs):
+    """True for an Action card without a linked PR and without a scheduled developer job."""
+    c = item["content"]
+    suffix = f"-{c['repository']['nameWithOwner'].split('/')[-1]}-{c['number']}"
+    return not c["closedByPullRequestsReferences"]["nodes"] and not any(n.endswith(suffix) for n in jobs)
+
+
+def check_idle(active, reported, seen):
+    """Report Action cards idle for IDLE_MINUTES and hand them to the product owner (#57).
+
+    Returns the idle cards already handed over: they no longer hold an instance.
+    """
+    jobs = scheduled_jobs()
+    if jobs is None:
+        return []
+    since_path = Path(cache) / "dispatch-idle.json"
+    try:
+        since = json.loads(since_path.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        since = {}
+    now, idle_since, handed = time.time(), {}, []
+    for item in (i for i in active if idle(i, jobs)):
+        c = item["content"]
+        idle_since[c["url"]] = since.get(c["url"], now)
+        if now - idle_since[c["url"]] < IDLE_MINUTES * 60:
+            continue
+        handed.append(item)
+        reason = f"on Action for {IDLE_MINUTES} minutes without a PR and without a developer job"
+        if report(item, reason, seen, reported, f"@{owner} ") and not DRY_RUN:
+            gh("api", "-X", "POST", f"repos/{c['repository']['nameWithOwner']}/issues/{c['number']}/assignees",
+               "-f", f"assignees[]={owner}")
+    if not DRY_RUN:
+        since_path.write_text(json.dumps(idle_since, sort_keys=True))
+    return handed
+
+
+def report(item, reason, seen, reported, mention=""):
+    """Comment once on a card that cannot start or run; True if this run reported it."""
     c = item["content"]
     key = f"{c['url']}|{reason}"
     seen[key] = True
     if key in reported:
-        return
-    print(f"nicht gestartet: {c['repository']['nameWithOwner']}#{c['number']}: {reason}")
+        return False
+    print(f"{'hängt' if mention else 'nicht gestartet'}: {c['repository']['nameWithOwner']}#{c['number']}: {reason}")
     if not DRY_RUN:
-        gh("api", f"repos/{c['repository']['nameWithOwner']}/issues/{c['number']}/comments",
-           "-f", f"body=Not started: {reason}. It stays on Goal and starts as soon as this is resolved.")
+        text = (f"{mention}Stuck: {reason}. Move it back to Goal to start it again." if mention
+                else f"Not started: {reason}. It stays on Goal and starts as soon as this is resolved.")
+        gh("api", f"repos/{c['repository']['nameWithOwner']}/issues/{c['number']}/comments", "-f", f"body={text}")
+    return True
 
 
 def main():
@@ -165,10 +253,12 @@ def main():
     pid, items = project_items()
     open_items = [i for i in items if i["content"]["state"] == "OPEN"]
     active = [i for i in open_items if status_of(i) == "Action"]
+    seen, fields, access = {}, None, {}
+    handed = check_idle(active, reported, seen)
+    active = [i for i in active if i not in handed]
     busy = {(i.get("instance") or {}).get("name") for i in active}
     free = [inst for inst in instances.split() if inst not in busy]
     running = [(i["content"]["repository"]["nameWithOwner"], allowed_files(i["content"]["body"])) for i in active]
-    seen, fields = {}, None
     for item in (i for i in open_items if status_of(i) == "Goal"):
         c = item["content"]
         if (c.get("issueType") or {}).get("name") == "Feature":
@@ -188,10 +278,17 @@ def main():
         repo = c["repository"]["nameWithOwner"]
         if not free or any(r == repo and overlaps(files, other) for r, other in running):
             continue
+        denied = write_access(repo, access)
+        if denied:
+            report(item, denied, seen, reported)
+            continue
         current = (item.get("instance") or {}).get("name")
         inst = current if current in free else free[0]
         fields = fields or field_ids()
-        start(pid, item, inst, fields)
+        failed = start(pid, item, inst, fields)
+        if failed:
+            report(item, f"the start failed while {failed}, see the dispatcher log", seen, reported)
+            continue
         free.remove(inst)
         running.append((repo, files))
     if not DRY_RUN:

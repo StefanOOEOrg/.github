@@ -110,3 +110,15 @@ def test_open_item_outside_the_flow_goes_to_the_product_owner(status):
 
 def test_closed_item_has_no_assignee():
     assert wants(card(1, "Done", state="CLOSED"))[1] is None
+
+
+def test_action_card_handed_to_the_product_owner_stays_with_him():
+    item = card(1, "Action")
+    item["content"]["assignees"]["nodes"] = [{"login": OWNER}]
+    assert wants(item)[1] == OWNER
+
+
+def test_action_card_with_the_developer_stays_with_the_developer():
+    item = card(1, "Action")
+    item["content"]["assignees"]["nodes"] = [{"login": DEV}]
+    assert wants(item)[1] == DEV

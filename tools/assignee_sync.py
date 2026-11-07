@@ -14,6 +14,7 @@ Rule (PROCESS.md, "Assignee = whoever acts next"):
     Goal, blocked                                    -> whoever acts next on the blocker; the product owner
                                                         if the blocker is not on the board
     Goal, not refined (no Branch or Allowed files)   -> Lead: refines it, then it starts by itself
+    Action, handed to the product owner by the dispatcher (no PR, no developer job) -> product owner
     Goal / Action                                    -> Developer
     open issue without status, or Done but still open -> product owner: a gap the process must not hide
     issue closed                                     -> nobody
@@ -150,6 +151,8 @@ def next_actor(item: dict) -> str | None:
         return LEAD
     if status == "Goal" and not has_task_order(issue):
         return LEAD  # pulled before it was refined: the dispatcher cannot start it
+    if status == "Action" and OWNER in current:
+        return OWNER  # the dispatcher found no PR and no developer job: the product owner decides (#57)
     if status in ("Goal", "Action"):
         return DEV
     if status == "Verify":
