@@ -20,6 +20,11 @@ OWNER_LOGIN="${OWNER_LOGIN:-StefanOOE}"
 STALE_HOURS="${STALE_HOURS:-3}"
 PROFILE_DIR="${HERMES_HOME:-$HOME/.hermes/profiles/sw-lead}"
 mkdir -p "$PROFILE_DIR/cache"
+# One run at a time: the old cron and the webhook tick (loop-tick.sh) may overlap; the second waits.
+if command -v flock >/dev/null; then
+  exec 9>"$PROFILE_DIR/cache/watch.lock"
+  flock -w 600 9 || { echo "watch: Lock nach 10 min nicht frei, Lauf übersprungen" >&2; exit 0; }
+fi
 
 python3 - "$ORG" "$PROJECT" "$LEAD" "$OWNER_LOGIN" "$STALE_HOURS" "$PROFILE_DIR/cache" <<'PY'
 import json, os, re, subprocess, sys, time

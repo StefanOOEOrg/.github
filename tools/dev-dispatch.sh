@@ -28,6 +28,11 @@ WS_ROOT="${WS_ROOT:-/home/hermes/workspaces}"
 PROFILE_DIR="${HERMES_HOME:-$HOME/.hermes/profiles/sw-lead}"
 DEV_JOBS="${DEV_JOBS:-$(dirname "$PROFILE_DIR")/sw-developer/cron/jobs.json}"
 mkdir -p "$PROFILE_DIR/cache"
+# One run at a time: the old cron and the webhook tick (loop-tick.sh) may overlap; the second waits.
+if command -v flock >/dev/null; then
+  exec 9>"$PROFILE_DIR/cache/dispatch.lock"
+  flock -w 600 9 || { echo "dispatch: Lock nach 10 min nicht frei, Lauf übersprungen" >&2; exit 0; }
+fi
 
 python3 - "$ORG" "$PROJECT" "$INSTANCES" "$DEV_LOGIN" "$OWNER_LOGIN" "$WS_ROOT" "$PROFILE_DIR/cache" \
   "$DEV_JOBS" <<'PY'
@@ -48,7 +53,7 @@ ITEMS_QUERY = """query($org: String!, $num: Int!, $after: String) { organization
   id items(first: 100, after: $after) { pageInfo { hasNextPage endCursor } nodes { id
     status: fieldValueByName(name: "Status") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
     instance: fieldValueByName(name: "Instance") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
-    content { ... on Issue { url number title state body issueType { name } repository { nameWithOwner }
+    content { ... on Issue { id url number title state body issueType { name } repository { nameWithOwner }
       assignees(first: 3) { nodes { login } } blockedBy(first: 5) { nodes { number state } }
       closedByPullRequestsReferences(first: 1, includeClosedPrs: false) { nodes { number } } } } } } } } }"""
 FIELDS_QUERY = """query($org: String!, $num: Int!) { organization(login: $org) { projectV2(number: $num) {
@@ -180,8 +185,26 @@ def start(pid, item, inst, fields):
         if step in ("setting instance and status", "creating the developer job"):
             set_field(pid, item, fields["Status"], "Goal")
         return step
-    print(f"{inst}: gestartet {repo_full}#{c['number']} ({branch}, Runde {rnd})")
+    print(f"{inst}: gestartet {repo_full}#{c['number']} ({branch}, Runde {rnd}){goal_to_action(c)}")
     return None
+
+
+def goal_to_action(content):
+    """Log the seconds from the move to Goal (stamped by the webhook filter) to this start."""
+    path = Path(cache) / "goal-since.json"
+    try:
+        since = json.loads(path.read_text())
+    except (FileNotFoundError, json.JSONDecodeError):
+        return ""
+    moved = since.pop(content.get("id"), None)
+    if moved is None:
+        return ""
+    seconds = round(time.time() - moved)
+    path.write_text(json.dumps(since, sort_keys=True))
+    with (Path(cache) / "goal-to-action.log").open("a") as log:
+        log.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} {content['repository']['nameWithOwner']}#"
+                  f"{content['number']} {seconds}\n")
+    return f", Goal→Action {seconds} s"
 
 
 def scheduled_jobs():
