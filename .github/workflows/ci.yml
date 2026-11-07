@@ -32,6 +32,8 @@ jobs:
         run: bash -n tools/github-watch.sh tools/dev-dispatch.sh tools/install.sh
       - name: Lint
         run: uvx ruff@0.17 check --config tools/ruff.toml .
+      - name: Pylint (loop engine)
+        run: cd tools && uvx --with pytest pylint==4.1.3 --max-line-length=100 loop
       - name: Tests
         run: uvx --with pytest pytest tools/ -q
   # Aggregate gate: one required check for every job of this workflow.

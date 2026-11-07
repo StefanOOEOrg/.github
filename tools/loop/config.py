@@ -1,0 +1,44 @@
+"""Configuration of the loop engine: every tunable value in one place.
+
+Values come from the environment (Hermes loads the profile's .env for its cron jobs) with the
+defaults of the current process. Nothing here is a secret: the GitHub token stays in gh's own
+config (GH_CONFIG_DIR).
+"""
+
+from __future__ import annotations
+
+import os
+
+# === GITHUB ===
+ORG = os.getenv("GH_ORG", "StefanOOEOrg")
+PROJECT_NUMBER = int(os.getenv("GH_PROJECT_NUMBER", "1"))
+# one gh call; a hung call must not block the run
+GH_TIMEOUT_SECONDS = int(os.getenv("GH_TIMEOUT_SECONDS", "60"))
+GH_ATTEMPTS = 3  # GitHub answers 502/504 on project queries now and then
+GH_BACKOFF_SECONDS = (2, 5)  # before the second and the third attempt
+
+# === ROLES (logins) ===
+LEAD = os.getenv("LEAD_LOGIN", "StefanOOELeadBot")
+DEV = os.getenv("DEV_LOGIN", "StefanOOEDevBot")
+OWNER = os.getenv("OWNER_LOGIN", "StefanOOE")
+
+# === BOARD ===
+STATUSES = ("Triage", "Backlog", "Goal", "Action", "Verify", "Done")
+# set by hand only; the engine never moves a card into them
+OWNER_ONLY_STATUSES = ("Backlog", "Goal")
+INSTANCES = tuple(os.getenv("DEV_INSTANCES", "dev-1").split())  # built for n, run with one
+# maintained directly: no board card, no Closes line, the Lead reviews after the merge
+OUTER_LOOP_REPO = ".github"
+
+# === RULE THRESHOLDS ===
+ROUND_LIMIT = 3  # Lead change requests on one PR before the product owner decides (A3)
+MAX_BLOCKER_CHAIN = 5  # enough for real chains, and it ends a dependency cycle (P3)
+STUCK_MINUTES = 15  # Action without PR and without a developer job (D2)
+OWNER_WAIT_HOURS = 2  # approve reminder: first after (W6)
+OWNER_REPEAT_HOURS = 24  # approve reminder: then at most every (W6)
+REMIND_MINUTES = 60  # an open Lead notice is repeated after this long
+ARCHIVE_DAYS = 14  # Done and closed this long: archive the item
+
+# === PROPOSALS (off until decided) ===
+# Verify -> Action when the linked PR was closed without a merge (design doc: proposal, not in use).
+VERIFY_BACK_TO_ACTION = os.getenv("LOOP_VERIFY_BACK_TO_ACTION") == "1"
