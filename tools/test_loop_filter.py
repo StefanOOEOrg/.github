@@ -65,3 +65,53 @@ def test_invalid_json_is_recorded_and_ignored(tmp_path, monkeypatch, capsys):
     assert loop_filter.main() == 0
     assert capsys.readouterr().out.strip() == "[SILENT]"
     assert '"invalid"' in (tmp_path / "cache" / "webhook-events.jsonl").read_text()
+
+
+def record(event, action, sender="StefanOOE", org="StefanOOEOrg", fork=False):
+    """Build the summary record the trigger decision reads."""
+    return {"event": event, "action": action, "sender": sender, "org": org, "fork": fork}
+
+
+@pytest.mark.parametrize("rec, expected", [
+    (record("projects_v2_item", "edited"), True),
+    (record("issues", "opened", sender="someone"), True),
+    (record("pull_request", "opened", sender="StefanOOEDevBot"), True),
+    (record("pull_request_review", "submitted", sender="StefanOOELeadBot"), True),
+    (record("issues", "edited", sender="StefanOOELeadBot"), True),
+    (record("projects_v2_item", "edited", sender="StefanOOELeadBot"), False),
+    (record("issues", "assigned", sender="StefanOOELeadBot"), False),
+    (record("issue_comment", "created", sender="StefanOOELeadBot"), False),
+    (record("projects_v2_item", "reordered"), False),
+    (record("pull_request", "synchronize"), False),
+    (record("ping", None), False),
+    (record("issues", "opened", org="SomeoneElse"), False),
+    (record("pull_request", "opened", fork=True), False),
+])
+def test_trigger_decision(rec, expected):
+    assert loop_filter.triggers(rec) is expected
+
+
+def test_relevant_event_fires_the_tick_and_stamps_goal(tmp_path, monkeypatch, capsys):
+    payload = {"action": "edited", "organization": {"login": "StefanOOEOrg"}, "sender": {"login": "StefanOOE"},
+               "projects_v2_item": {"content_node_id": "I_9"},
+               "changes": {"field_value": {"field_name": "Status", "to": {"name": "Goal"}}}}
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    monkeypatch.setattr(loop_filter, "__file__", str(scripts / "loop_filter.py"))
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+    assert loop_filter.main() == 0
+    assert json.loads(capsys.readouterr().out)["subject"] == "I_9"
+    assert "I_9" in json.loads((tmp_path / "cache" / "goal-since.json").read_text())
+    assert (tmp_path / "cache" / "tick-requested").exists()
+
+
+def test_lead_echo_stays_silent_and_requests_nothing(tmp_path, monkeypatch, capsys):
+    payload = {"action": "edited", "organization": {"login": "StefanOOEOrg"},
+               "sender": {"login": "StefanOOELeadBot"}, "projects_v2_item": {"content_node_id": "I_9"}}
+    scripts = tmp_path / "scripts"
+    scripts.mkdir()
+    monkeypatch.setattr(loop_filter, "__file__", str(scripts / "loop_filter.py"))
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
+    assert loop_filter.main() == 0
+    assert capsys.readouterr().out.strip() == "[SILENT]"
+    assert not (tmp_path / "cache" / "tick-requested").exists()

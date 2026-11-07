@@ -24,6 +24,7 @@ FILES=(
   dev-dispatch.sh
   assignee_sync.py
   loop_filter.py
+  loop-tick.sh
   review-pack.py
   gen-prozess-diagramm.py
   gen-beitrag-diagramm.py
