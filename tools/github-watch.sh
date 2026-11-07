@@ -26,8 +26,15 @@ if command -v flock >/dev/null; then
   flock -w 600 9 || { echo "watch: Lock nach 10 min nicht frei, Lauf übersprungen" >&2; exit 0; }
 fi
 
+# Assignee = whoever acts next (PROCESS.md). The sync reads the board itself, so it runs alongside the
+# watch below instead of after it; its changes go to a log, not to the Lead; a failure is reported.
+SYNC="$PROFILE_DIR/scripts/assignee_sync.py"
+python3 "$SYNC" "$ORG" "$PROJECT" ${WATCH_DRY_RUN:+--dry-run} >> "$PROFILE_DIR/cache/assignee-sync.log" 2>&1 &
+SYNC_PID=$!
+
 python3 - "$ORG" "$PROJECT" "$LEAD" "$OWNER_LOGIN" "$STALE_HOURS" "$PROFILE_DIR/cache" <<'PY'
 import json, os, re, subprocess, sys, time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -173,10 +180,14 @@ def off_board(issue):
     return issue["repository"]["name"] == OUTER_LOOP_REPO
 
 
-def add_missing(events):
+def open_issues():
+    """Every open issue of the org with its project memberships."""
+    return json.loads(gh("api", "graphql", "-f", f"query={ISSUE_QUERY}",
+                         "-f", f"q=is:issue is:open archived:false org:{org}"))["data"]["search"]["nodes"]
+
+
+def add_missing(events, found):
     """Safety net: every open org issue belongs in the project (auto-add covers one repo per workflow only)."""
-    found = json.loads(gh("api", "graphql", "-f", f"query={ISSUE_QUERY}",
-                          "-f", f"q=is:issue is:open archived:false org:{org}"))["data"]["search"]["nodes"]
     missing = [i for i in found if not off_board(i)
                and str(project) not in {str(n["project"]["number"]) for n in i["projectItems"]["nodes"]}]
     if not missing or DRY_RUN:
@@ -244,11 +255,15 @@ def card_events(node, events, now):
         events[f"stale:{c['url']}"] = f"Hängt seit >{stale_h} h auf Action ohne PR ({instance}): {name}"
 
 
-def post_merge_events(events, today):
-    """The Lead reviews a merged .github PR afterwards: that repository is the outer loop."""
+def merged_outer_loop_prs(today):
+    """The .github PRs merged since yesterday."""
     since = (today - timedelta(days=1)).isoformat()
-    merged = json.loads(gh("search", "prs", "--repo", f"{org}/{OUTER_LOOP_REPO}", "--merged", "--merged-at", f">={since}",
-                           "--json", "url,number,title"))
+    return json.loads(gh("search", "prs", "--repo", f"{org}/{OUTER_LOOP_REPO}", "--merged", "--merged-at", f">={since}",
+                         "--json", "url,number,title"))
+
+
+def post_merge_events(events, merged):
+    """The Lead reviews a merged .github PR afterwards: that repository is the outer loop."""
     for pr in merged:
         events[f"postmerge:{pr['url']}"] = f"Inbox – nach dem Merge prüfen: #{pr['number']} {pr['title'][:70]} {pr['url']}"
 
@@ -262,17 +277,22 @@ def is_due(key, last, now):
 
 
 def collect(today):
-    """Return all current events."""
+    """Read the four independent GitHub views at the same time (each ~1 s), then evaluate them."""
     events = {}
-    prs = json.loads(gh("api", "graphql", "-f", f"query={PR_QUERY}", "-f", f"q=is:pr is:open org:{org}"))
-    prs = prs["data"]["search"]["nodes"]
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        prs_f = pool.submit(lambda: json.loads(gh("api", "graphql", "-f", f"query={PR_QUERY}",
+                                                  "-f", f"q=is:pr is:open org:{org}"))["data"]["search"]["nodes"])
+        issues_f = pool.submit(open_issues)
+        board_f = pool.submit(lambda: list(board_items()))
+        merged_f = pool.submit(merged_outer_loop_prs, today)
+        prs, issues, board, merged = prs_f.result(), issues_f.result(), board_f.result(), merged_f.result()
     pr_events(prs, events)
     remind_owner(prs, events)
-    add_missing(events)
+    add_missing(events, issues)
     now = datetime.now(timezone.utc)
-    for node in board_items():
+    for node in board:
         card_events(node, events, now)
-    post_merge_events(events, today)
+    post_merge_events(events, merged)
     days = (today - RETRO_START).days
     if days >= 0 and days % RETRO_DAYS == 0:
         events[f"retro:{today}"] = f"Retro fällig: Issue „Retro {today}“ in .github anlegen (PROCESS.md, Continuous improvement)"
@@ -320,8 +340,6 @@ def main():
 main()
 PY
 
-# Assignee = whoever acts next (PROCESS.md). Changes go to a log, not to the Lead; a failure is reported.
-SYNC="$PROFILE_DIR/scripts/assignee_sync.py"
-if ! python3 "$SYNC" "$ORG" "$PROJECT" >> "$PROFILE_DIR/cache/assignee-sync.log" 2>&1; then
+if ! wait "$SYNC_PID"; then
     echo "assignee-sync fehlgeschlagen, siehe cache/assignee-sync.log"
 fi
