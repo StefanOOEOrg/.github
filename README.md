@@ -2,6 +2,20 @@
 
 Organization-wide community health files for `StefanOOEOrg`.
 
+## Why The Loop
+
+This organization practises loop engineering: every task runs through the same loop on its own
+instead of being planned into sprints. Processes like Scrum were designed for teams of humans –
+capacity, estimates, stand-ups – and do not fit an agentic team with a human reviewer, where the
+limit is the human's attention at the gates, not the work in between.
+
+The idea behind it: the process lives in a script – deterministic, tested and traceable in its log
+– and decides every transition on the board. Language models are used only where judgement is
+needed, for writing the code and for reviewing it; the human sets the goals at the entry gate and
+approves at the exit gate.
+
+## What is in this repository
+
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — the engineering guidelines every repository in this
   organization follows. GitHub surfaces this file automatically when an issue or pull request is
   created in any repository of the organization that has no own `CONTRIBUTING.md`.
