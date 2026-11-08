@@ -52,6 +52,11 @@ def why_not(card: Card, access: Callable[[str], str | None]) -> str | None:
     return access(card.ref.repo)  # D9: None when both bots can write
 
 
+def job_instances(jobs: set[str] | None) -> set[str]:
+    """Instances with a scheduled developer job (``<instance>-<repo>-<number>``): still at work."""
+    return {i for i in config.INSTANCES for name in (jobs or ()) if name.startswith(f"{i}-")}
+
+
 def held_by_owner(card: Card) -> bool:
     """D5: the round limit handed it to the owner, who decides."""
     return config.OWNER in card.assignees and bool(card.open_prs)
@@ -72,7 +77,7 @@ def dispatch(board: Board, jobs: set[str] | None, now: datetime,
     """
     active = [c for c in board.cards if c.state.is_open and c.state.status == "Action"
               and not is_stuck(c, jobs, now)]
-    busy = {c.state.instance for c in active}
+    busy = {c.state.instance for c in active} | job_instances(jobs)
     free = [i for i in config.INSTANCES if i not in busy]  # D1
     running = [(c.ref.repo, c.task.allowed_files) for c in active]
     result = Dispatch()

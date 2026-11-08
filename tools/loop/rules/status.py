@@ -32,12 +32,28 @@ def transition(card: Card, *,
         return "Triage"  # item added to the project
     if status == "Done":
         return "Triage" if reopened_after_done(card) else None  # else: closed, see close_due
-    if status == "Action" and card.open_prs:
-        return "Verify"  # a PR is linked
+    if status == "Action" and round_done(card):
+        return "Verify"  # a PR is linked and the developer handed it to review
     closed_unmerged = card.prs and not any(p.state == "MERGED" for p in card.prs)
     if status == "Verify" and verify_back_to_action and not card.open_prs and closed_unmerged:
         return "Action"
     return None
+
+
+def round_done(card: Card) -> bool:
+    """True if a developer round on Action is finished: an open PR asks the Lead for a review.
+
+    In round 2+ the PR is open from the start, so an open PR alone is not the end of the round:
+    the developer requests the Lead's review as the last step of every round. A review submitted
+    after the card got Action counts as well (the request is gone once the Lead has reviewed).
+    """
+    since = card.state.changed
+    for pr in card.open_prs:
+        if config.LEAD in pr.requested:
+            return True
+        if since and any(r.submitted_at and r.submitted_at > since for r in pr.reviews):
+            return True
+    return False
 
 
 def reopened_after_done(card: Card) -> bool:
