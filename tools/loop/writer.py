@@ -66,6 +66,12 @@ class GitHubWriter:
         if add:
             self._call(["api", "-X", "POST", path, *_logins(add)], f"assign {what}")
 
+    def request_review(self, ref: Ref, login: str) -> None:
+        """Ask a person for a review of a PR (idempotent on GitHub's side)."""
+        self._call(["api", "-X", "POST", f"repos/{ref.repo}/pulls/{ref.number}/requested_reviewers",
+                    "-f", f"reviewers[]={login}"],
+                   f"request review of {login} on {ref.repo}#{ref.number}")
+
     def comment(self, ref: Ref, body: str) -> None:
         """Comment on an issue or PR."""
         self._call(["api", f"repos/{ref.repo}/issues/{ref.number}/comments", "-f", f"body={body}"],
