@@ -37,7 +37,15 @@ GitHub is the single source of truth. A GitHub event reaches the Hermes gateway 
 webhook; the route filters it and fires the loop engine, which reads what the event concerns,
 decides with fixed rules and writes only what differs. Agents do the work that needs judgement –
 code, review, merge – and report back through GitHub. Colours: green GitHub, blue Hermes,
-orange our code.
+orange our code, red the human.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
+  <img alt="Architecture of The Loop: the product owner works on GitHub; the org webhook reaches the Hermes gateway through Tailscale Funnel; route and cron run the loop engine, which reads and writes the board, starts developer jobs and sends notices to the Lead" src="docs/diagrams/architecture-light.svg">
+</picture>
+
+<details>
+<summary>Mermaid source</summary>
 
 ```mermaid
 flowchart LR
@@ -70,6 +78,8 @@ flowchart LR
   classDef ours fill:#fff1e0,stroke:#ef6c00,color:#1b1b1b
   classDef infra fill:#f2f2f2,stroke:#757575,color:#1b1b1b
 ```
+
+</details>
 
 Every card follows one state machine. The engine evaluates it from the facts on each run (not from
 the events), so a missed event is repaired by the next run; Backlog and Goal stay the product
