@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 660" width="900" height="660" role="img" aria-label="Card states of The Loop: two human gates around the agent loop">
+<title>Card states of The Loop</title>
+<style>
+text{font-family:-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif;fill:#1f2328;text-anchor:middle}
+.kick{font-size:11px;font-weight:600;letter-spacing:1.2px;fill:#59636e}
+.redt{fill:#c8102e}
+.title{font-size:20px;font-weight:700}
+.sub{font-size:13px;fill:#59636e}
+.lbl{font-size:13px;fill:#59636e}
+.lblr{font-size:13px;fill:#c8102e;font-weight:600}
+.ring1{font-size:12px;font-weight:700;letter-spacing:1.5px;fill:#6e7781}
+.agent{fill:#ffffff;stroke:#d0d7de;stroke-width:1.5}
+.gate{fill:#fdf0f2;stroke:#c8102e;stroke-width:2}
+path{fill:none;stroke-width:2.2}
+.a{stroke:#6e7781}
+.r{stroke:#c8102e}
+.d{stroke:#6e7781;stroke-dasharray:6 5}
+</style>
+<defs>
+<marker id="ma" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#6e7781;stroke:none"/></marker>
+<marker id="mr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#c8102e;stroke:none"/></marker>
+</defs>
+<rect class="gate" x="230.0" y="16.0" width="440" height="84" rx="12"/><text class="kick redt" x="450" y="39.0">HUMAN (PRODUCT OWNER) · GATE</text><text class="title" x="450" y="63.0">Triage → Backlog → Goal</text><text class="sub" x="450" y="88.0">create the card · prioritise · release it</text>
+<path class="r" d="M450,100 V143" marker-end="url(#mr)"/>
+<rect class="agent" x="345.0" y="147.0" width="210" height="76" rx="12"/><text class="kick" x="450" y="170.0">LOOP ENGINE</text><text class="title" x="450" y="194.0">Goal</text><text class="sub" x="450" y="211.0">waits for a free developer</text>
+<rect class="agent" x="575.0" y="292.0" width="210" height="76" rx="12"/><text class="kick" x="680" y="315.0">DEV AGENT</text><text class="title" x="680" y="339.0">Action</text><text class="sub" x="680" y="356.0">worktree · commits · PR</text>
+<rect class="agent" x="345.0" y="437.0" width="210" height="76" rx="12"/><text class="kick" x="450" y="460.0">CI + LEAD AGENT</text><text class="title" x="450" y="484.0">Verify</text><text class="sub" x="450" y="501.0">checks · review rounds</text>
+<path class="a" d="M557,185 Q680,185 680,288" marker-end="url(#ma)"/>
+<text class="lbl" x="612" y="173" style="text-anchor:start">dispatcher starts it</text>
+<path class="a" d="M680,370 Q680,475 559,475" marker-end="url(#ma)"/>
+<text class="lbl" x="690" y="452" style="text-anchor:start">PR linked</text>
+<path class="a" d="M343,475 Q220,475 220,330 Q220,185 341,185" marker-end="url(#ma)"/>
+<text class="lbl" x="208" y="326" style="text-anchor:end">instance free:</text>
+<text class="lbl" x="208" y="343" style="text-anchor:end">next Goal card</text>
+<path class="d" d="M505,436 Q565,410 605,372" marker-end="url(#ma)"/>
+<text class="lbl" x="497" y="404" style="text-anchor:end">PR closed unmerged</text>
+<text class="lbl" x="497" y="420" style="text-anchor:end">(switch, off)</text>
+<text class="ring1" x="440" y="318">AGENT LOOP</text>
+<text class="lbl" x="440" y="338">the engine reconciles</text>
+<text class="lbl" x="440" y="354">on every event</text>
+<path class="r" d="M450,514 V552" marker-end="url(#mr)"/>
+<text class="lblr" x="462" y="538" style="text-anchor:start">approved PR</text>
+<rect class="gate" x="230.0" y="556.0" width="440" height="84" rx="12"/><text class="kick redt" x="450" y="579.0">HUMAN + LEAD · GATE</text><text class="title" x="450" y="603.0">Merge → Done</text><text class="sub" x="450" y="628.0">owner approves · Lead merges · archived after 14 days</text>
+<path class="r" d="M670,598 H850 V58 H676" marker-end="url(#mr)"/>
+<text class="lblr" transform="translate(868,330) rotate(-90)">reopened → Triage</text>
+</svg>
