@@ -22,7 +22,7 @@ from loop.rules.checks import (
 )
 from loop.rules.dispatch import Start, dispatch
 from loop.rules.notices import card_notices, post_merge, pr_notices
-from loop.rules.status import archive_due, transition
+from loop.rules.status import archive_due, close_due, transition
 
 
 @dataclass
@@ -32,6 +32,7 @@ class BoardChanges:
     status: list[tuple[Card, str]] = field(default_factory=list)  # (card, wanted status)
     assignee: list[tuple[Card, str | None]] = field(default_factory=list)  # (card, wanted actor)
     archive: list[Card] = field(default_factory=list)
+    close: list[Card] = field(default_factory=list)  # moved to Done by hand, issue still open
     add: list[Ref] = field(default_factory=list)  # W7: open org issues missing from the project
 
 
@@ -57,6 +58,8 @@ def card_decisions(card: Card, want: str | None, jobs: set[str] | None, now: dat
         out.board.assignee.append((card, want))
     if is_stuck(card, jobs, now) and config.OWNER not in card.assignees:
         out.stuck.append(card)
+    if close_due(card) and card.ref.writable:
+        out.board.close.append(card)
     if archive_due(card, now):
         out.board.archive.append(card)
     if card.state.is_open:

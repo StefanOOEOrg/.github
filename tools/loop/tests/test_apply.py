@@ -122,3 +122,19 @@ def test_notices_go_to_stdout_lines(tmp_path):
     out.notices = [Finding("review:x", "Inbox – Review wartet")]
     lines, _ = apply(out, GitHubWriter(recorder()), Store(tmp_path / "s.json"), NOW, True)
     assert lines == ["Inbox – Review wartet"]
+
+
+def test_card_moved_to_done_by_hand_gets_its_issue_closed(tmp_path):
+    """No Auto-close workflow: the engine closes the issue and leaves Done alone."""
+    rec, _ = run(card(3, "Done", changed=ago(2)), store_dir=tmp_path)
+    joined = "\n".join(rec.calls)
+    assert "PATCH repos/" in joined and "state=closed" in joined
+    assert "state_reason=completed" in joined
+    assert "o=oTriage" not in joined
+
+
+def test_reopened_done_card_goes_to_triage_and_stays_open(tmp_path):
+    """A reopen after Done moves the card to Triage; nothing is closed."""
+    rec, _ = run(card(4, "Done", changed=ago(60), reopened_at=ago(1)), store_dir=tmp_path)
+    joined = "\n".join(rec.calls)
+    assert "o=oTriage" in joined and "state=closed" not in joined

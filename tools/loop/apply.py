@@ -47,6 +47,8 @@ def _board(out: Decisions, writer: GitHubWriter, store: Store, now: datetime) ->
         _safely("status", writer.set_field, card.state.item, "Status", status)
     for card, want in out.board.assignee:
         _assign(card, want, writer, store, now)
+    for card in out.board.close:
+        _safely("close", writer.close, card)
     for card in out.board.archive:
         _safely("archive", writer.archive, card)
     added = []

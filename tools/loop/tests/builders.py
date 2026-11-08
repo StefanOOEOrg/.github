@@ -45,7 +45,7 @@ def card(number: int = 1, status: str | None = "Goal", *, body: str = ORDER,
          is_open: bool = True, **extra) -> Card:
     """A card; ``extra`` sets assignees, blockers, prs, activity, instance, changed, task, repo."""
     state = CardState(is_open, status, extra.get("changed"), extra.get("instance"),
-                      extra.get("closed_at"))
+                      extra.get("closed_at"), reopened_at=extra.get("reopened_at"))
     task = extra.get("task") or Task(body, extra.get("issue_type"), extra.get("sub_issues", 0))
     blockers = tuple(Blocker(REPO, n, True) for n in extra.get("blocked_by", ()))
     return Card(Ref(extra.get("repo", REPO), number, f"https://x/i{number}"), state, task,

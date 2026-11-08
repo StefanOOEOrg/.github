@@ -149,9 +149,10 @@ stateDiagram-v2
   approved → Lead merges.
 
 
-The loop engine sets these transitions; the project's built-in workflows are switched off:
+The loop engine sets these transitions; all of the project's built-in workflows are switched off:
 
-- Item added → **Triage**; item reopened → **Triage**
+- Item added → **Triage**; item reopened → **Triage** (a reopen after the card reached Done)
+- card moved to **Done** by hand while its issue is open → the engine closes the issue (completed)
 - PR linked → **Verify**
 - PR merged / item closed → **Done**
 - closed items are archived after 14 days

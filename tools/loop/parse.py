@@ -58,6 +58,11 @@ def _activity(issue: dict) -> Activity:
                     when(comment.get("createdAt")))
 
 
+def _reopened(issue: dict) -> datetime | None:
+    node = ((issue.get("reopened") or {}).get("nodes") or [None])[-1] or {}
+    return when(node.get("createdAt"))
+
+
 def parse_card(item: dict, issue: dict) -> Card:
     """One project item (Status, Instance) and its issue."""
     repo = issue["repository"]
@@ -66,7 +71,7 @@ def parse_card(item: dict, issue: dict) -> Card:
               writable=repo.get("viewerPermission") in WRITE_PERMISSIONS)
     state = CardState(issue["state"] == "OPEN", status.get("name"), when(status.get("updatedAt")),
                       (item.get("instance") or {}).get("name"), when(issue.get("closedAt")),
-                      item.get("id", ""))
+                      item.get("id", ""), _reopened(issue))
     task = Task(issue.get("body") or "", (issue.get("issueType") or {}).get("name"),
                 (issue.get("subIssues") or {}).get("totalCount", 0))
     blockers = tuple(Blocker(b["repository"]["nameWithOwner"], b["number"], b["state"] == "OPEN")
