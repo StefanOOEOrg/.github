@@ -1,6 +1,7 @@
 """assignee(card): exactly one assignee per card, whoever acts next. First matching rule wins.
 
-A1..A10 are the rules of assignee_sync.next_actor, P1..P3 the blocker rules of its plan().
+A1..A10 are the rules of the former assignee_sync.next_actor, P1..P3 the blocker rules of its
+plan() (removed, in the git history up to 18f3b46).
 """
 
 from __future__ import annotations
