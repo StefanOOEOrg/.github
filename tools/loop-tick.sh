@@ -8,8 +8,8 @@
 #     --deliver bot-chat:sw-lead --failure-deliver local
 #
 # stdout is the delivery to the Lead; the engine's log goes to cache/loop.log.
-# The old scripts (dev-dispatch.sh, github-watch.sh, assignee_sync.py) stay in the repository as
-# the way back until the engine has proved itself.
+# The old scripts (dev-dispatch.sh, github-watch.sh, assignee_sync.py) are in the git history up
+# to commit 18f3b46.
 set -uo pipefail
 
 PROFILE_DIR="${HERMES_HOME:-$HOME/.hermes/profiles/sw-lead}"
