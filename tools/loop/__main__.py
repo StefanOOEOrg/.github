@@ -1,4 +1,4 @@
-"""Command line: ``python3 -m loop tick [--dry-run]``.
+"""Command line: ``python3 -m loop tick|jobwatch [--dry-run]``.
 
 Run from the profile's scripts directory, where install.sh puts the package.
 """
@@ -10,6 +10,7 @@ import logging
 import sys
 
 from loop.github_client import GitHubError
+from loop.jobwatch import jobwatch
 from loop.tick import tick
 
 
@@ -19,10 +20,14 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("tick", help="one engine run (scope from HERMES_CRON_EVENT)")
     run.add_argument("--dry-run", action="store_true", help="decide and log, write nothing")
+    watch = sub.add_parser("jobwatch", help="a full run once a developer job has ended")
+    watch.add_argument("--dry-run", action="store_true", help="decide and log, write nothing")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, stream=sys.stderr,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     try:
+        if args.command == "jobwatch":
+            return jobwatch(dry_run=args.dry_run)
         return tick(dry_run=args.dry_run)
     except (GitHubError, TimeoutError) as error:
         logging.getLogger("loop").error("run failed: %s", error)

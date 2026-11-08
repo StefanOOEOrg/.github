@@ -21,6 +21,7 @@ set -euo pipefail
 
 FILES=(
   loop-tick.sh
+  loop-jobwatch.sh
   review-pack.py
   gen-prozess-diagramm.py
   gen-beitrag-diagramm.py
@@ -32,6 +33,7 @@ FILES=(
   loop/config.py
   loop/engine.py
   loop/github_client.py
+  loop/jobwatch.py
   loop/model.py
   loop/parse.py
   loop/queries.py

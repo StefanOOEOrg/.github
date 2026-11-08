@@ -27,6 +27,10 @@ class GitHubError(RuntimeError):
     """A GitHub read failed after all attempts, or answered with errors."""
 
 
+class NotAnIssue(LookupError):
+    """The number of a one-card event is a pull request (a comment on a PR)."""
+
+
 def run_gh(args: list[str]) -> str:
     """Run one gh call with timeout and retries; return its stdout."""
     last: Exception | None = None
@@ -84,10 +88,16 @@ class GitHubClient:
         return parse_board(self.board_pages(today))
 
     def card(self, repo: str, number: int) -> Card | None:
-        """One card (scope of an event on one issue); None if it is not on the project."""
+        """One card (scope of an event on one issue); None if it is not on the project.
+
+        Raises:
+            NotAnIssue: the number is a pull request.
+        """
         owner, name = repo.split("/", 1)
         data = self._graphql(CARD_QUERY, {"owner": owner, "name": name, "number": number})
-        issue = (data.get("repository") or {}).get("issue")
+        issue = (data.get("repository") or {}).get("issueOrPullRequest")
+        if issue and issue.get("__typename") == "PullRequest":
+            raise NotAnIssue(f"{repo}#{number} is a pull request")
         if not issue:
             return None
         items = [n for n in issue["projectItems"]["nodes"]

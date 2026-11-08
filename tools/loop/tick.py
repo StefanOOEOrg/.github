@@ -19,7 +19,7 @@ from loop import config
 from loop.access import access_checker
 from loop.apply import apply
 from loop.engine import Decisions, card_decisions, decide
-from loop.github_client import GitHubClient
+from loop.github_client import GitHubClient, NotAnIssue
 from loop.model import Ref
 from loop.scope import Scope, scope_of
 from loop.store import Store
@@ -62,7 +62,11 @@ def decide_scope(client: GitHubClient, scope: Scope, now: datetime) -> Decisions
         return decide(client.board(now.date()), jobs, now, access_checker())
     out = Decisions()
     repo, number = scope.card
-    card = client.card(repo, number)
+    try:
+        card = client.card(repo, number)
+    except NotAnIssue:
+        logger.info("%s#%s is a pull request: a comment on it changes no card", repo, number)
+        return out
     if card is None:
         if repo.split("/")[-1] != config.OUTER_LOOP_REPO:
             out.board.add = [Ref(repo, number, f"https://github.com/{repo}/issues/{number}")]
@@ -72,10 +76,10 @@ def decide_scope(client: GitHubClient, scope: Scope, now: datetime) -> Decisions
     return out
 
 
-def tick(dry_run: bool = False) -> int:
-    """The run; 0 on success."""
+def tick(dry_run: bool = False, full: bool = False) -> int:
+    """The run; 0 on success. ``full`` reads the whole board whatever the trigger was."""
     now = datetime.now(UTC)
-    scope = scope_of(os.environ.get("HERMES_CRON_EVENT"))
+    scope = Scope(None, "full") if full else scope_of(os.environ.get("HERMES_CRON_EVENT"))
     cache = Path(config.CACHE_DIR)
     with run_lock(cache / "loop.lock"):
         out = decide_scope(GitHubClient(), scope, now)

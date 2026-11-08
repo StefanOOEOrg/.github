@@ -58,7 +58,8 @@ query($org: String!, $num: Int!, $after: String, $first: Boolean!, $prs: String!
 CARD_QUERY = """
 query($owner: String!, $name: String!, $number: Int!) {
   rateLimit { cost remaining resetAt }
-  repository(owner: $owner, name: $name) { issue(number: $number) {
-    ...Issue
-    projectItems(first: 5) { nodes { project { number } """ + ITEM_FIELDS + """ } } } }
+  repository(owner: $owner, name: $name) { issueOrPullRequest(number: $number) {
+    __typename
+    ... on Issue { ...Issue
+      projectItems(first: 5) { nodes { project { number } """ + ITEM_FIELDS + """ } } } } }
 }""" + ISSUE_FIELDS + PR_FIELDS

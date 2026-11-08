@@ -133,6 +133,7 @@ stateDiagram-v2
   Triage --> Goal: product owner
   Goal --> Action: dispatcher starts it
   Action --> Verify: PR linked
+  Verify --> Goal: Lead requests changes (next round)
   Verify --> Done: issue closed
   Done --> Triage: reopened
   Done --> [*]: archived after 14 days
@@ -142,7 +143,8 @@ stateDiagram-v2
 
 - **Goal → Action:** a free instance, no overlap of *Allowed files* with a running card, no open
   blocker, a task order (Branch and Allowed files), not a Feature, both bots can write; the first
-  startable card in Goal order starts.
+  startable card in Goal order starts. From round 2 a card returns to the instance it had (its
+  branch is checked out there) and waits while that instance is busy.
 - **Verify:** the assignee follows the PR – review requested → Lead; Lead approved → product
   owner; changes requested → Developer (from the third round → product owner); product owner
   approved → Lead merges.
@@ -153,6 +155,8 @@ The loop engine sets these transitions; all of the project's built-in workflows 
 - Item added → **Triage**; item reopened → **Triage** (a reopen after the card reached Done)
 - card moved to **Done** by hand while its issue is open → the engine closes the issue (completed)
 - PR linked and the Lead's review requested (end of a developer round) → **Verify**; an instance stays busy while its developer job is scheduled
+- the Lead's *changes requested* on the current head of an open PR, below the round limit → **Goal**, and the dispatcher starts the next round on the same instance; at the limit the card stays on Verify with the product owner
+- the end of a developer job triggers a full engine run (job watch), so a freed instance takes the next card within a minute
 - PR merged / item closed → **Done**
 - closed items are archived after 14 days
 - every open org issue that is missing from the project is added (status Triage), so no repository needs its own auto-add rule
@@ -169,7 +173,7 @@ The loop engine sets these transitions; all of the project's built-in workflows 
 3. **Refinement review (product owner)** – Triage is ping-pong between the product owner and the Lead: whoever commented or edited the card last hands the turn to the other, and the engine moves the assignee accordingly (the product owner assigning himself keeps it). The Lead comments after every refinement round (*refined, ready for your review*). The product owner releases the wording by moving the card to **Backlog**; that ends the ping-pong.
 4. **Pull (product owner)** – A card moved onto **Goal** is released. Its acceptance criteria are the goal and its termination condition; priority is when the product owner pulls a card to Goal; the column order breaks ties. What is pulled decides the review load: the developer instances cap the running work, the product owner caps what they have to review.
 5. **Action** – A dispatcher starts the first startable Goal card per free instance in a dedicated worktree: it sets instance, Developer and **Action**. A card pulled before it was refined goes to the Lead, who refines it in place. A card with an open blocker stays on Goal and gets a comment with the reason, and the assignee moves to whoever acts next on the blocker. Files that overlap a running card wait for their turn. A card starts only if both bots can write to its repository, otherwise it gets one comment; a card reaches Action only together with its developer job – a failed start puts it back on Goal with a comment. An Action card without a PR and without a developer job for 15 minutes is reported, handed to the product owner and no longer holds its instance; moving it back to Goal starts it again. The developer works test-first, commits, pushes and opens the PR with `Closes #<task>` and requests the Lead's review. Status moves to **Verify**.
-6. **Verify (Lead)** – A review starts from the generated pack and runs in a **fresh checker session** (see *Review context*): quality gates (CI, coverage, lint), mutation probes against "false green" tests, a formal GitHub review posted from the checker's verdict. *Request changes* sends the task back to **Goal** for the next round. After the third round the task goes to the product owner with the open findings. On the Lead's approval of the current head the engine requests the product owner's review.
+6. **Verify (Lead)** – A review starts from the generated pack and runs in a **fresh checker session** (see *Review context*): quality gates (CI, coverage, lint), mutation probes against "false green" tests, a formal GitHub review posted from the checker's verdict. *Request changes* sends the task back to **Goal** for the next round: the engine moves the card and starts the round itself; the Lead neither moves it nor creates a developer job by hand. After the third round the task goes to the product owner with the open findings. On the Lead's approval of the current head the engine requests the product owner's review.
 7. **Human gate and merge** – The product owner approves (a reminder comes after 2 h of waiting); the Lead merges. The task closes and moves to **Done**; merged predecessors unblock the next tasks. The process runs at L2: a human gate on every merge.
 8. **Acceptance and release** – The product owner's approval of the closing task's PR (changelog, version, acceptance table per requirement) is the acceptance of the feature **and** the go for the release: the Lead tags `vX.Y.Z`, publishes the GitHub release and closes the feature.
 9. **Retro** – Every two weeks, at a fixed rhythm (see Continuous improvement).

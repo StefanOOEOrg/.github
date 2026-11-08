@@ -85,7 +85,7 @@ def test_dry_run_writes_nothing(tmp_path):
 def test_start_reverts_to_goal_when_the_job_cannot_be_created(tmp_path, monkeypatch):
     """D10 / #57: no Action without a job."""
     rec = recorder()
-    monkeypatch.setattr(starter, "prepare_worktree", lambda c, i: ("/tmp/wt", False))
+    monkeypatch.setattr(starter, "prepare_worktree", lambda c, i, b: ("/tmp/wt", False))
 
     def fail(*args, **kwargs):
         raise subprocess.CalledProcessError(1, "hermes", stderr="boom")
