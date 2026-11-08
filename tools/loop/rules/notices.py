@@ -1,4 +1,5 @@
-"""inbox: notices to the Lead (W1..W3 per PR, W4 review request, W8, W9, W11 per card, W15 per merged .github PR).
+"""inbox: notices to the Lead (W1..W3 per PR, W8, W9, W11 per card, W15 per merged .github PR)
+and W4, the owner's review request the engine posts itself.
 
 A notice is repeated after ``REMIND_MINUTES`` while it is still due, unless it is ``once``; that
 bookkeeping is the store's job, the rules only say what is due now.

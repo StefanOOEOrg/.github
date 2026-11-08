@@ -114,7 +114,7 @@ def test_owner_comment_in_triage_reaches_the_lead():
     (pr(review(LEAD, "APPROVED", commit="old")), False),  # approval on an older head
     (pr(review(LEAD, "CHANGES_REQUESTED")), False),
     (pr(review(OWNER, "CHANGES_REQUESTED", minutes_ago=30),
-        review(LEAD, "APPROVED", minutes_ago=5)), True),  # new Lead approval after the owner's change request: ask again
+        review(LEAD, "APPROVED", minutes_ago=5)), True),  # new approval after his change request
     (pr(review(LEAD, "APPROVED", minutes_ago=30), review(OWNER, "APPROVED", minutes_ago=5)),
      False),  # the owner reviewed since
     (pr(review(LEAD, "APPROVED"), repo="StefanOOEOrg/.github"), False),  # outer loop
