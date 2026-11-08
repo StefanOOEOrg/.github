@@ -3,7 +3,7 @@
 import pytest
 
 from loop.rules.status import archive_due, close_due, transition
-from loop.tests.builders import NOW, ago, card, pr
+from loop.tests.builders import LEAD, NOW, ago, card, pr, review
 
 DAY = 24 * 60
 
@@ -13,7 +13,12 @@ DAY = 24 * 60
     (card(status="Done", changed=ago(60), reopened_at=ago(5)), "Triage"),  # reopened
     (card(status="Done", changed=ago(5), reopened_at=ago(60)), None),  # by hand: closed instead
     (card(status="Done", changed=ago(5)), None),  # by hand, never reopened
-    (card(status="Action", prs=[pr()]), "Verify"),  # PR linked
+    (card(status="Action", prs=[pr(requested=(LEAD,))]), "Verify"),  # PR linked, review asked
+    (card(status="Action", changed=ago(60), prs=[pr(review(LEAD, "APPROVED", minutes_ago=5))]),
+     "Verify"),  # reviewed since the start
+    (card(status="Action", prs=[pr()]), None),  # round 2: the PR is open, the round is not done
+    (card(status="Action", changed=ago(5), prs=[pr(review(LEAD, "CHANGES_REQUESTED",
+                                                       minutes_ago=60))]), None),  # old review
     (card(status="Verify", is_open=False), "Done"),  # issue closed
     (card(status="Action", is_open=False), "Done"),  # closed from anywhere
     (card(status="Done", is_open=False), None),

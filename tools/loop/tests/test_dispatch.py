@@ -17,10 +17,10 @@ def starts(result):
     return [(s.card.ref.number, s.instance) for s in result.starts]
 
 
-def run(*cards, instances=("dev-1",), access=ALL_WRITE):
-    """Dispatch these cards with no developer job scheduled."""
+def run(*cards, instances=("dev-1",), access=ALL_WRITE, jobs=frozenset()):
+    """Dispatch these cards; by default no developer job is scheduled."""
     with patch("loop.config.INSTANCES", instances):
-        return dispatch(board(*cards), set(), NOW, access)
+        return dispatch(board(*cards), set(jobs), NOW, access)
 
 
 def test_first_startable_goal_card_starts_on_the_free_instance():
@@ -38,6 +38,19 @@ def test_busy_instance_waits():
     """D1: a running Action card holds its instance."""
     result = run(card(1, "Action", instance="dev-1", changed=ago(1)), card(2, "Goal"))
     assert not starts(result) and [c.ref.number for c in result.waiting] == [2]
+
+
+def test_instance_with_a_running_job_is_busy_even_off_action():
+    """Round 2: the card already moved on to Verify, its developer job still holds the instance."""
+    round2 = card(1, "Verify", instance="dev-1", prs=[pr(requested=("x",))])
+    result = run(round2, card(2, "Goal"), jobs={"dev-1-repo-a-1"})
+    assert not starts(result) and [c.ref.number for c in result.waiting] == [2]
+
+
+def test_job_of_another_instance_leaves_this_one_free():
+    """Only the instance in the job name is busy."""
+    result = run(card(2, "Goal"), instances=("dev-1", "dev-2"), jobs={"dev-1-repo-a-9"})
+    assert starts(result) == [(2, "dev-2")]
 
 
 def test_stuck_action_card_frees_its_instance():

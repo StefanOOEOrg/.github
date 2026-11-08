@@ -153,7 +153,7 @@ The loop engine sets these transitions; all of the project's built-in workflows 
 
 - Item added → **Triage**; item reopened → **Triage** (a reopen after the card reached Done)
 - card moved to **Done** by hand while its issue is open → the engine closes the issue (completed)
-- PR linked → **Verify**
+- PR linked and the Lead's review requested (end of a developer round) → **Verify**; an instance stays busy while its developer job is scheduled
 - PR merged / item closed → **Done**
 - closed items are archived after 14 days
 - every open org issue that is missing from the project is added (status Triage), so no repository needs its own auto-add rule
