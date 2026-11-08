@@ -20,7 +20,7 @@ path{fill:none;stroke-width:2.2}
 <marker id="ma" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#6e7781;stroke:none"/></marker>
 <marker id="mr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#c8102e;stroke:none"/></marker>
 </defs>
-<rect class="gate" x="230.0" y="16.0" width="440" height="84" rx="12"/><text class="kick redt" x="450" y="39.0">HUMAN (PRODUCT OWNER) · GATE</text><text class="title" x="450" y="63.0">Triage → Backlog → Goal</text><text class="sub" x="450" y="88.0">create the card · prioritise · release it</text>
+<rect class="gate" x="230.0" y="16.0" width="440" height="84" rx="12"/><text class="kick redt" x="450" y="39.0">HUMAN (PRODUCT OWNER) · GATE</text><text class="title" x="450" y="63.0">Triage → Backlog → Goal</text><text class="sub" x="450" y="88.0">ping-pong with the Lead until released · prioritise</text>
 <path class="r" d="M450,100 V143" marker-end="url(#mr)"/>
 <rect class="agent" x="345.0" y="147.0" width="210" height="76" rx="12"/><text class="kick" x="450" y="170.0">LOOP ENGINE</text><text class="title" x="450" y="194.0">Goal</text><text class="sub" x="450" y="211.0">waits for a free developer</text>
 <rect class="agent" x="575.0" y="292.0" width="210" height="76" rx="12"/><text class="kick" x="680" y="315.0">DEV AGENT</text><text class="title" x="680" y="339.0">Action</text><text class="sub" x="680" y="356.0">worktree · commits · PR</text>
