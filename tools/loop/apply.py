@@ -76,6 +76,8 @@ def _comments(out: Decisions, writer: GitHubWriter, store: Store, now: datetime)
                     f"@{config.OWNER} Stuck: on Action for {config.STUCK_MINUTES} minutes without "
                     "a PR and without a developer job. Move it back to Goal to start it again.")
             _safely("assignees", writer.assignees, card, {config.OWNER}, set())
+    for pr in out.ask_owner:
+        _safely("review request", writer.request_review, pr.ref, config.OWNER)
     for pr, reminder in out.reminders:
         if store.reminder_due(reminder.key, now):
             _safely("reminder", writer.comment, pr.ref, reminder.text)

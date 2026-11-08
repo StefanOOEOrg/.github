@@ -4,7 +4,7 @@ import pytest
 
 from loop.model import Activity
 from loop.rules.checks import approve_reminder, card_findings, is_stuck, orphan_pr
-from loop.rules.notices import card_notices, post_merge, pr_notices
+from loop.rules.notices import card_notices, owner_review_due, post_merge, pr_notices
 from loop.tests.builders import LEAD, NOW, OWNER, ago, card, pr, review
 
 GITHUB = "StefanOOEOrg/.github"
@@ -53,10 +53,9 @@ def test_approve_reminder(given, expected):
     (pr(requested=(LEAD,)), "review:"),  # W1
     (pr(review(OWNER, "APPROVED")), "merge:"),  # W2
     (pr(review(OWNER, "CHANGES_REQUESTED")), "changes:"),  # W3 on the head
-    (pr(review(LEAD, "APPROVED")), "ask-owner:"),  # W4
 ])
 def test_pr_notices(given, prefix):
-    """W1..W4: exactly the notice the PR state asks for."""
+    """W1..W3: exactly the notice the PR state asks for."""
     assert [f.key.split(":")[0] + ":" for f in pr_notices(given)] == [prefix]
 
 
@@ -107,3 +106,19 @@ def test_owner_comment_in_triage_reaches_the_lead():
     act = Activity(commented_by=OWNER, commented_at=ago(1), edited_by=LEAD, edited_at=ago(9))
     given = card(6, "Triage", assignees=[OWNER], activity=act)
     assert any(f.text.startswith("Inbox – Stefan hat kommentiert") for f in card_notices(given))
+
+
+@pytest.mark.parametrize("given, expected", [
+    (pr(review(LEAD, "APPROVED")), True),  # Lead approved the head, owner not asked
+    (pr(review(LEAD, "APPROVED"), requested=(OWNER,)), False),  # already asked
+    (pr(review(LEAD, "APPROVED", commit="old")), False),  # approval on an older head
+    (pr(review(LEAD, "CHANGES_REQUESTED")), False),
+    (pr(review(OWNER, "CHANGES_REQUESTED", minutes_ago=30),
+        review(LEAD, "APPROVED", minutes_ago=5)), True),  # new approval after his change request
+    (pr(review(LEAD, "APPROVED", minutes_ago=30), review(OWNER, "APPROVED", minutes_ago=5)),
+     False),  # the owner reviewed since
+    (pr(review(LEAD, "APPROVED"), repo="StefanOOEOrg/.github"), False),  # outer loop
+])
+def test_owner_review_is_requested_by_the_engine(given, expected):
+    """W4: the engine asks the owner once the Lead approved the current head."""
+    assert owner_review_due(given) is expected

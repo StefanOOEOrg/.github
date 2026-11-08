@@ -21,7 +21,7 @@ from loop.rules.checks import (
     orphan_pr,
 )
 from loop.rules.dispatch import Start, dispatch
-from loop.rules.notices import card_notices, post_merge, pr_notices
+from loop.rules.notices import card_notices, owner_review_due, post_merge, pr_notices
 from loop.rules.status import archive_due, close_due, transition
 
 
@@ -46,6 +46,7 @@ class Decisions:
     stuck: list[Card] = field(default_factory=list)  # D2: hand over to the owner
     notices: list[Finding] = field(default_factory=list)  # to the Lead, via stdout
     reminders: list[tuple[PullRequest, Finding]] = field(default_factory=list)  # W6 PR comments
+    ask_owner: list[PullRequest] = field(default_factory=list)  # W4: request the owner's review
 
 
 def card_decisions(card: Card, want: str | None, jobs: set[str] | None, now: datetime,
@@ -77,6 +78,8 @@ def decide(board: Board, jobs: set[str] | None, now: datetime,
     out.starts, out.blocked = starts.starts, starts.blocked
     for pr in board.open_prs:
         out.notices += pr_notices(pr)
+        if owner_review_due(pr):
+            out.ask_owner.append(pr)
         orphan = orphan_pr(pr)
         if orphan:
             out.notices.append(orphan)
