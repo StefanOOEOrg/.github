@@ -13,7 +13,7 @@ from loop.engine import Decisions
 from loop.github_client import GitHubError
 from loop.model import Card
 from loop.rules.assignee import round_limit_pr
-from loop.starter import start
+from loop.starter import WAITING, start
 from loop.store import Store
 from loop.writer import GitHubWriter
 
@@ -87,7 +87,9 @@ def _starts(out: Decisions, writer: GitHubWriter, store: Store, now: datetime) -
     lines = []
     for planned in out.starts:
         card = planned.card
-        failed = start(card, planned.instance, writer)
+        failed = start(card, planned.instance, writer, planned.busy)
+        if failed == WAITING:
+            continue  # its branch is still in use by a busy instance: no comment, next run
         if failed:
             reason = f"the start failed while {failed}, see the engine log"
             if store.first_comment(f"{card.ref.url}|{reason}", now):

@@ -7,6 +7,7 @@ architecture and the card states are in the [README](../README.md) and [PROCESS.
 |---|---|
 | `loop/` | The loop engine, `python3 -m loop tick [--dry-run]`: reads what an event concerns (one card, or the whole board), decides with pure rules (`rules/`) and writes only the differences. Log `cache/loop.log`, the only local state `cache/loop-state.json` (what was already reported). Tests in `loop/tests/`. |
 | `loop-tick.sh` | Runs the engine once. No-agent cron `loop-tick` of the `sw-lead` profile: on every webhook event (route `loop`, event in `HERMES_CRON_EVENT`) and hourly. |
+| `loop-jobwatch.sh` | `python3 -m loop jobwatch`: a full engine run once a developer job has ended (its instance is free, but no GitHub event says so). No-agent cron `loop-jobwatch` of the `sw-lead` profile, every minute; silent and without GitHub calls while no job ended. |
 | `install.sh` | Copies these files into `profiles/<profile>/scripts/`. Hermes only runs scripts from there, so the cron runs a copy: never edit it. Idempotent. |
 | `review-pack.py` | `review-pack.py <owner/repo> <pr>`: the review pack for one PR (task, why, CI, earlier findings, round, scope drift, matching lessons). Read-only. |
 | `gen-prozess-diagramm.py`, `gen-beitrag-diagramm.py`, `swimlane_svg.py` | Render the swimlanes in `assets/` (internal and external process). `gen-*.py [out_dir]`. |

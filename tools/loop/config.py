@@ -24,7 +24,8 @@ OWNER = os.getenv("OWNER_LOGIN", "StefanOOE")
 
 # === BOARD ===
 STATUSES = ("Triage", "Backlog", "Goal", "Action", "Verify", "Done")
-# set by hand only; the engine never moves a card into them
+# set by hand; the engine moves a card into Goal only for the next round after a change request
+# (#81) and back after a failed start
 OWNER_ONLY_STATUSES = ("Backlog", "Goal")
 INSTANCES = tuple(os.getenv("DEV_INSTANCES", "dev-1").split())  # built for n, run with one
 # maintained directly: no board card, no Closes line, the Lead reviews after the merge

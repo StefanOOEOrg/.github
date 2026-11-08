@@ -18,10 +18,11 @@ from loop.rules.checks import is_stuck
 
 @dataclass(frozen=True)
 class Start:
-    """Start this card on this instance."""
+    """Start this card on this instance; ``busy`` are the instances still at work in this run."""
 
     card: Card
     instance: str
+    busy: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -57,6 +58,16 @@ def job_instances(jobs: set[str] | None) -> set[str]:
     return {i for i in config.INSTANCES for name in (jobs or ()) if name.startswith(f"{i}-")}
 
 
+def own_instance(card: Card) -> str | None:
+    """D3: the instance a round 2+ card must return to, None if any free instance will do.
+
+    From round 2 the branch is pushed and checked out in the worktree of the instance the card
+    had; git allows a branch in one worktree only, so the card waits for that instance.
+    """
+    inst = card.state.instance
+    return inst if inst in config.INSTANCES and card.open_prs else None
+
+
 def held_by_owner(card: Card) -> bool:
     """D5: the round limit handed it to the owner, who decides."""
     return config.OWNER in card.assignees and bool(card.open_prs)
@@ -89,11 +100,13 @@ def dispatch(board: Board, jobs: set[str] | None, now: datetime,
             result.blocked.append((card, reason))
             continue
         files = card.task.allowed_files
-        if not free or any(r == card.ref.repo and overlaps(files, o) for r, o in running):
-            result.waiting.append(card)  # D8 or no free instance
+        own = own_instance(card)
+        if not free or (own and own not in free) \
+                or any(r == card.ref.repo and overlaps(files, o) for r, o in running):
+            result.waiting.append(card)  # D8, no free instance, or its own instance is busy
             continue
         inst = card.state.instance if card.state.instance in free else free[0]
-        result.starts.append(Start(card, inst))
+        result.starts.append(Start(card, inst, frozenset(busy)))
         free.remove(inst)
         running.append((card.ref.repo, files))
     return result
