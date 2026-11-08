@@ -33,12 +33,19 @@ def transition(card: Card, *,
         return "Triage"  # item added to the project
     if status == "Done":
         return "Triage" if reopened_after_done(card) else None  # else: closed, see close_due
-    if status == "Action" and round_done(card):
-        return "Verify"  # a PR is linked and the developer handed it to review
-    if status == "Verify" and next_round(card):
+    return _in_flow(card, status, verify_back_to_action)
+
+
+def _in_flow(card: Card, status: str, verify_back_to_action: bool) -> str | None:
+    """The transitions of an open card in the agent loop (Action, Verify)."""
+    if status == "Action":
+        return "Verify" if round_done(card) else None  # the developer handed it to review
+    if status != "Verify":
+        return None
+    if next_round(card):
         return "Goal"  # the Lead requested changes: the dispatcher starts the next round
     closed_unmerged = card.prs and not any(p.state == "MERGED" for p in card.prs)
-    if status == "Verify" and verify_back_to_action and not card.open_prs and closed_unmerged:
+    if verify_back_to_action and not card.open_prs and closed_unmerged:
         return "Action"
     return None
 
