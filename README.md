@@ -61,6 +61,14 @@ Every card follows one state machine. The engine evaluates it from the facts on 
 the events), so a missed event is repaired by the next run; Backlog and Goal stay the product
 owner's.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/loop-states-dark.svg">
+  <img alt="Card states of The Loop: the product owner gate (Triage, Backlog, Goal), the agent loop (Goal, Action, Verify), the merge gate (Done), reopened back to Triage" src="docs/diagrams/loop-states-light.svg">
+</picture>
+
+<details>
+<summary>Mermaid source</summary>
+
 ```mermaid
 stateDiagram-v2
   direction LR
@@ -75,6 +83,8 @@ stateDiagram-v2
   Done --> Triage: reopened
   Done --> [*]: archived after 14 days
 ```
+
+</details>
 
 - **Goal → Action:** a free instance, no overlap of *Allowed files* with a running card, no open
   blocker, a task order (Branch and Allowed files), not a Feature, both bots can write; the first
