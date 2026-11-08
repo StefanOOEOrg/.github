@@ -32,9 +32,6 @@ path{fill:none;stroke-width:2.2}
 <path class="a" d="M343,475 Q220,475 220,330 Q220,185 341,185" marker-end="url(#ma)"/>
 <text class="lbl" x="208" y="326" style="text-anchor:end">instance free:</text>
 <text class="lbl" x="208" y="343" style="text-anchor:end">next Goal card</text>
-<path class="d" d="M505,436 Q565,410 605,372" marker-end="url(#ma)"/>
-<text class="lbl" x="497" y="404" style="text-anchor:end">PR closed unmerged</text>
-<text class="lbl" x="497" y="420" style="text-anchor:end">(switch, off)</text>
 <text class="ring1" x="440" y="318">AGENT LOOP</text>
 <text class="lbl" x="440" y="338">the engine reconciles</text>
 <text class="lbl" x="440" y="354">on every event</text>
