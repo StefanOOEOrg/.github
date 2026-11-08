@@ -92,6 +92,7 @@ class CardState:
     changed: datetime | None = None  # when the Status value was last set
     instance: str | None = None
     closed_at: datetime | None = None
+    item: str = ""  # project item id (for field writes and archiving)
 
 
 @dataclass(frozen=True)

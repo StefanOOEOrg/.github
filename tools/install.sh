@@ -28,6 +28,27 @@ FILES=(
   gen-prozess-diagramm.py
   gen-beitrag-diagramm.py
   swimlane_svg.py
+  loop/__init__.py
+  loop/__main__.py
+  loop/access.py
+  loop/apply.py
+  loop/config.py
+  loop/engine.py
+  loop/github_client.py
+  loop/model.py
+  loop/parse.py
+  loop/queries.py
+  loop/rules/__init__.py
+  loop/rules/assignee.py
+  loop/rules/checks.py
+  loop/rules/dispatch.py
+  loop/rules/notices.py
+  loop/rules/status.py
+  loop/scope.py
+  loop/starter.py
+  loop/store.py
+  loop/tick.py
+  loop/writer.py
 )
 
 profile="sw-lead"
@@ -130,7 +151,7 @@ for file in "${FILES[@]}"; do
     continue
   fi
   mode="$(stat -c '%a' "$src")"
-  install -m "$mode" "$src" "$dest"
+  install -D -m "$mode" "$src" "$dest"
   echo "copied     $dest"
 done
 

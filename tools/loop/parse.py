@@ -65,7 +65,8 @@ def parse_card(item: dict, issue: dict) -> Card:
     ref = Ref(repo["nameWithOwner"], issue["number"], issue.get("url", ""),
               writable=repo.get("viewerPermission") in WRITE_PERMISSIONS)
     state = CardState(issue["state"] == "OPEN", status.get("name"), when(status.get("updatedAt")),
-                      (item.get("instance") or {}).get("name"), when(issue.get("closedAt")))
+                      (item.get("instance") or {}).get("name"), when(issue.get("closedAt")),
+                      item.get("id", ""))
     task = Task(issue.get("body") or "", (issue.get("issueType") or {}).get("name"),
                 (issue.get("subIssues") or {}).get("totalCount", 0))
     blockers = tuple(Blocker(b["repository"]["nameWithOwner"], b["number"], b["state"] == "OPEN")
