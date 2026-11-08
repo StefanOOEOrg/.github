@@ -103,7 +103,6 @@ stateDiagram-v2
   Goal --> Action: dispatcher starts it
   Action --> Verify: PR linked
   Verify --> Done: issue closed
-  Verify --> Action: PR closed unmerged (proposal, off)
   Done --> Triage: reopened
   Done --> [*]: archived after 14 days
 ```
