@@ -74,20 +74,12 @@ stateDiagram-v2
   Verify --> Action: PR closed unmerged (proposal, off)
   Done --> Triage: reopened
   Done --> [*]: archived after 14 days
-  note right of Goal
-    starts when: free instance,
-    no overlap of Allowed files,
-    no open blocker, task order present,
-    not a Feature, both bots can write,
-    first startable in Goal order
-  end note
-  note right of Verify
-    assignee follows the PR:
-    review requested → Lead
-    Lead approved → product owner
-    changes requested → Developer
-    (from round 3 → product owner)
-    owner approved → Lead merges
-  end note
 ```
+
+- **Goal → Action:** a free instance, no overlap of *Allowed files* with a running card, no open
+  blocker, a task order (Branch and Allowed files), not a Feature, both bots can write; the first
+  startable card in Goal order starts.
+- **Verify:** the assignee follows the PR – review requested → Lead; Lead approved → product
+  owner; changes requested → Developer (from the third round → product owner); product owner
+  approved → Lead merges.
 
