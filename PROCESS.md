@@ -2,6 +2,9 @@
 
 How StefanOOEOrg builds software: a small team of AI agents and one human product owner, working in Kanban on GitHub with the terms of loop engineering: a goal with a termination condition, action, verification, a human gate.
 
+Why we work this way and the idea behind it – the process in a deterministic script, coding and
+review by agents – is in the [README](README.md#why-the-loop).
+
 **Rule zero:** GitHub is the single source of truth. What is not in an issue, a pull request or the project board did not happen.
 
 ## Roles
