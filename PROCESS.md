@@ -42,6 +42,14 @@ The automation that drives this process – the loop engine `tools/loop` (run by
 
 Overview (green GitHub, blue Hermes, orange our code):
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
+  <img alt="Architecture of The Loop: the product owner works on GitHub; the org webhook reaches the Hermes gateway through Tailscale Funnel; route and cron run the loop engine, which reads and writes the board, starts developer jobs and sends notices to the Lead" src="docs/diagrams/architecture-light.svg">
+</picture>
+
+<details>
+<summary>Mermaid source</summary>
+
 ```mermaid
 flowchart LR
   owner(["Product owner"]):::gh
@@ -73,6 +81,8 @@ flowchart LR
   classDef ours fill:#fff1e0,stroke:#ef6c00,color:#1b1b1b
   classDef infra fill:#f2f2f2,stroke:#757575,color:#1b1b1b
 ```
+
+</details>
 
 ### Project fields
 

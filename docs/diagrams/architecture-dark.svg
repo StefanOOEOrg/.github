@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 525" width="1220" height="525" role="img" aria-label="Architecture of The Loop: GitHub, Tailscale Funnel, Hermes gateway and the loop engine">
+<title>Architecture of The Loop</title>
+<style>
+text{font-family:-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif;fill:#e6edf3;text-anchor:middle}
+.kick{font-size:10.5px;font-weight:600;letter-spacing:1.1px}
+.gk{font-size:11px;font-weight:700;letter-spacing:1.4px;text-anchor:start}
+.title{font-size:17px;font-weight:700}
+.sub{font-size:12.5px;fill:#9198a1}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px}
+.lbl{font-size:12.5px;fill:#9198a1}
+.b{fill:#161b22;stroke-width:1.6}
+.red{stroke:#f0596b}.gh{stroke:#3fb950}.hm{stroke:#58a6ff}.ours{stroke:#f0883e;stroke-width:2.2}.infra{stroke:#9198a1}
+.k-red{fill:#f0596b}.k-gh{fill:#3fb950}.k-hm{fill:#58a6ff}.k-ours{fill:#f0883e}.k-infra{fill:#9198a1}
+.frame{stroke-width:1.2;stroke-dasharray:none}
+.f-gh{fill:#3fb950;fill-opacity:0.08;stroke:#3fb950}
+.f-hm{fill:#58a6ff;fill-opacity:0.08;stroke:#58a6ff}
+path{fill:none;stroke-width:1.8}.a{stroke:#9198a1}.r{stroke:#f0596b;stroke-width:2.2}
+</style>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#9198a1;stroke:none"/></marker><marker id="mr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#f0596b;stroke:none"/></marker></defs>
+<rect class="frame f-gh" x="195" y="64" width="220" height="446" rx="16"/>
+<text class="gk k-gh" x="211" y="88">GITHUB</text>
+<rect class="frame f-hm" x="623" y="64" width="366" height="446" rx="16"/>
+<text class="gk k-hm" x="639" y="88">HERMES GATEWAY · PROFILE SW-LEAD</text>
+<rect class="b red" x="20.0" y="98.0" width="140" height="104" rx="12"/><text class="kick k-red" x="90" y="119.0">HUMAN</text><text class="title" x="90" y="141.0">Product owner</text><text class="sub" x="90" y="160.0">pulls cards to Goal,</text><text class="sub" x="90" y="176.0">approves</text>
+<rect class="b gh" x="215.0" y="108.0" width="180" height="84" rx="12"/><text class="kick k-gh" x="305" y="129.0">PROJECT</text><text class="title" x="305" y="151.0">“The Loop”</text><text class="sub" x="305" y="170.0">Status field</text>
+<rect class="b gh" x="215.0" y="248.0" width="180" height="84" rx="12"/><text class="kick k-gh" x="305" y="269.0">CODE</text><text class="title" x="305" y="291.0">Repositories</text><text class="sub" x="305" y="310.0">issues · PRs · reviews</text>
+<rect class="b gh" x="215.0" y="398.0" width="180" height="84" rx="12"/><text class="kick k-gh" x="305" y="419.0">ORG WEBHOOK</text><text class="title" x="305" y="441.0">5 events</text><text class="sub" x="305" y="460.0">HMAC-signed</text>
+<rect class="b infra" x="450.0" y="398.0" width="140" height="84" rx="12"/><text class="kick k-infra" x="520" y="419.0">TAILSCALE</text><text class="title" x="520" y="441.0">Funnel</text><text class="sub" x="520" y="460.0">one path only</text>
+<rect class="b hm" x="818.5" y="108.0" width="155" height="84" rx="12"/><text class="kick k-hm" x="896" y="129.0">DEVELOPER AGENT</text><text class="title" x="896" y="151.0">Dev job</text><text class="sub" x="896" y="170.0">one-shot job per card</text>
+<rect class="b hm" x="638.5" y="248.0" width="155" height="84" rx="12"/><text class="kick k-hm" x="716" y="269.0">LEAD AGENT</text><text class="title" x="716" y="291.0">Lead</text><text class="sub" x="716" y="310.0">refine · review · merge</text>
+<rect class="b hm" x="818.5" y="248.0" width="155" height="84" rx="12"/><text class="kick k-hm" x="896" y="269.0">BOT CHAT</text><text class="title" x="896" y="291.0">Delivery</text><text class="sub" x="896" y="310.0">queue, ~4 s</text>
+<rect class="b hm" x="638.5" y="390.0" width="155" height="100" rx="12"/><text class="kick k-hm" x="716" y="411.0">ROUTE</text><text class="title" x="716" y="433.0">“loop”</text><text class="sub" x="716" y="452.0">filters · coalesce</text><text class="sub" x="716" y="468.0"><tspan class="mono">HERMES_CRON_EVENT</tspan></text>
+<rect class="b hm" x="818.5" y="398.0" width="155" height="84" rx="12"/><text class="kick k-hm" x="896" y="419.0">CRON</text><text class="title" x="896" y="441.0">“loop-tick”</text><text class="sub" x="896" y="460.0">per event + hourly</text>
+<rect class="b ours" x="1060.5" y="240.0" width="135" height="100" rx="12"/><text class="kick k-ours" x="1128" y="261.0">OUR CODE</text><text class="title" x="1128" y="283.0">Loop engine</text><text class="sub" x="1128" y="302.0"><tspan class="mono">python3 -m</tspan></text><text class="sub" x="1128" y="318.0"><tspan class="mono">loop tick</tspan></text>
+<path class="r" d="M160,150 H211" marker-end="url(#mr)"/>
+<path class="a" d="M215,175 H205 V460 H211" marker-end="url(#ma)"/>
+<path class="a" d="M305,332 V394" marker-end="url(#ma)"/>
+<path class="a" d="M395,440 H446" marker-end="url(#ma)"/>
+<path class="a" d="M590,440 H634" marker-end="url(#ma)"/>
+<path class="a" d="M793,440 H814" marker-end="url(#ma)"/>
+<path class="a" d="M973,440 H1128 V344" marker-end="url(#ma)"/>
+<path class="a" d="M1195,290 H1207 V36 H305 V104" marker-end="url(#ma)"/>
+<text class="lbl" x="700" y="28">1 GraphQL read, only the differences written</text>
+<path class="a" d="M1090,240 V150 H978" marker-end="url(#ma)"/>
+<text class="lbl" x="1025" y="125">start:</text><text class="lbl" x="1025" y="140">dev job</text>
+<path class="a" d="M1060,300 H978" marker-end="url(#ma)"/>
+<text class="lbl" x="1023" y="275">notices</text><text class="lbl" x="1023" y="290">on stdout</text>
+<path class="a" d="M818,290 H797" marker-end="url(#ma)"/>
+<path class="a" d="M818,150 H432 V280 H399" marker-end="url(#ma)"/>
+<text class="lbl" x="522" y="141">gh / git: branch, PR</text>
+<path class="a" d="M638,300 H399" marker-end="url(#ma)"/>
+<text class="lbl" x="522" y="291">gh: review, merge</text>
+</svg>
