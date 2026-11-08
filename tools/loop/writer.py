@@ -78,6 +78,12 @@ class GitHubWriter:
                             f"add {ref.repo}#{ref.number}")
         return json.loads(answer).get("id", "")
 
+    def close(self, card: Card) -> None:
+        """Close a card's issue as completed."""
+        self._call(["api", "-X", "PATCH", f"repos/{card.ref.repo}/issues/{card.ref.number}",
+                    "-f", "state=closed", "-f", "state_reason=completed"],
+                   f"close {card.ref.repo}#{card.ref.number}")
+
     def archive(self, card: Card) -> None:
         """Archive a project item."""
         project, _ = self._fields()

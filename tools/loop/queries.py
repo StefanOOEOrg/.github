@@ -26,6 +26,8 @@ fragment Issue on Issue {
   timelineItems(last: 1, itemTypes: [ASSIGNED_EVENT]) { nodes { ... on AssignedEvent {
     createdAt actor { login } assignee { ... on User { login } } } } }
   comments(last: 1) { nodes { createdAt author { login } } }
+  reopened: timelineItems(last: 1, itemTypes: [REOPENED_EVENT]) {
+    nodes { ... on ReopenedEvent { createdAt } } }
   closedByPullRequestsReferences(first: 3, includeClosedPrs: true) { nodes { ...PR } }
 }"""
 

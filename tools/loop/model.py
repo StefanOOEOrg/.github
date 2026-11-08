@@ -93,6 +93,7 @@ class CardState:
     instance: str | None = None
     closed_at: datetime | None = None
     item: str = ""  # project item id (for field writes and archiving)
+    reopened_at: datetime | None = None  # the issue's latest reopen
 
 
 @dataclass(frozen=True)

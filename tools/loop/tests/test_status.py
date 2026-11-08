@@ -2,7 +2,7 @@
 
 import pytest
 
-from loop.rules.status import archive_due, transition
+from loop.rules.status import archive_due, close_due, transition
 from loop.tests.builders import NOW, ago, card, pr
 
 DAY = 24 * 60
@@ -10,7 +10,9 @@ DAY = 24 * 60
 
 @pytest.mark.parametrize("given, expected", [
     (card(status=None), "Triage"),  # item added to the project
-    (card(status="Done"), "Triage"),  # reopened
+    (card(status="Done", changed=ago(60), reopened_at=ago(5)), "Triage"),  # reopened
+    (card(status="Done", changed=ago(5), reopened_at=ago(60)), None),  # by hand: closed instead
+    (card(status="Done", changed=ago(5)), None),  # by hand, never reopened
     (card(status="Action", prs=[pr()]), "Verify"),  # PR linked
     (card(status="Verify", is_open=False), "Done"),  # issue closed
     (card(status="Action", is_open=False), "Done"),  # closed from anywhere
@@ -47,3 +49,15 @@ def test_archive_after_14_days_closed(days, expected):
 def test_open_done_card_is_not_archived():
     """An open card on Done is a gap for the owner, not an archive case."""
     assert archive_due(card(status="Done", closed_at=ago(30 * DAY)), NOW) is False
+
+
+@pytest.mark.parametrize("given, expected", [
+    (card(status="Done", changed=ago(5)), True),  # moved to Done by hand
+    (card(status="Done", changed=ago(5), reopened_at=ago(60)), True),  # reopened long before
+    (card(status="Done", changed=ago(60), reopened_at=ago(5)), False),  # reopened: Triage
+    (card(status="Done", is_open=False), False),  # already closed
+    (card(status="Verify"), False),
+])
+def test_close_issue_moved_to_done_by_hand(given, expected):
+    """Done + open: the latest reopen decides between reopened (Triage) and closing the issue."""
+    assert close_due(given) is expected
