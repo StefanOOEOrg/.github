@@ -82,3 +82,28 @@ def test_card_notices():
 def test_post_merge_is_once():
     """W15: reported a single time."""
     assert post_merge(pr(state="MERGED", repo=GITHUB)).once is True
+
+
+def test_new_triage_card_is_reported_once_to_the_lead():
+    """A card put on Triage by hand (not by the engine) tells the Lead once."""
+    new = card(5, "Triage", body="question")
+    assert [f.key for f in card_notices(new) if f.once] == ["triage-new:https://x/i5"]
+
+
+@pytest.mark.parametrize("given", [
+    card(5, "Triage"),  # refined already
+    card(5, "Triage", body="q", assignees=[OWNER],
+         activity=Activity(assigned_by=OWNER, assigned_to=OWNER, assigned_at=ago(1))),  # held
+    card(5, "Triage", body="q", activity=Activity(assigned_by=OWNER, assigned_to=LEAD,
+                                                  assigned_at=ago(1))),  # W9 tells him
+])
+def test_no_triage_new_notice_when_not_needed(given):
+    """Refined, held by the owner, or already assigned to the Lead: no extra notice."""
+    assert not [f for f in card_notices(given) if f.key.startswith("triage-new:")]
+
+
+def test_owner_comment_in_triage_reaches_the_lead():
+    """Ping-pong: the owner's comment in Triage is the Lead's turn, whoever is assigned."""
+    act = Activity(commented_by=OWNER, commented_at=ago(1), edited_by=LEAD, edited_at=ago(9))
+    given = card(6, "Triage", assignees=[OWNER], activity=act)
+    assert any(f.text.startswith("Inbox – Stefan hat kommentiert") for f in card_notices(given))

@@ -9,7 +9,7 @@ from __future__ import annotations
 from loop import config
 from loop.model import Board, Card, PullRequest
 
-MANUAL_WINS = ("Triage", "Backlog", "Verify", None)  # a manual assignment of the owner wins (A2)
+MANUAL_WINS = ("Backlog", "Verify", None)  # a manual assignment of the owner wins (A2)
 
 
 def manual_assignee(card: Card) -> str | None:
@@ -45,10 +45,26 @@ def _action(card: Card) -> str:
     return config.OWNER if config.OWNER in card.assignees else config.DEV
 
 
-def _triage(card: Card) -> str:
-    """A9: refined or held by the owner -> owner, else the Lead refines it."""
-    held = card.task.refined or config.OWNER in card.assignees
-    return config.OWNER if held else config.LEAD
+def triage_turn(card: Card) -> str:
+    """A9: Triage is ping-pong between owner and Lead until the owner moves the card to Backlog.
+
+    Whoever acted last hands the turn to the other: a comment or body edit of the owner, or his
+    assignment of the Lead -> Lead; a comment or body edit of the Lead -> owner. The owner
+    assigning himself holds it. Without either: refined -> owner, else the Lead refines it.
+    """
+    act = card.activity
+    people = (config.OWNER, config.LEAD)
+    events = [(at, who, False) for at, who in ((act.commented_at, act.commented_by),
+                                               (act.edited_at, act.edited_by))
+              if at and who in people]
+    if act.assigned_by == config.OWNER and act.assigned_at:
+        events.append((act.assigned_at, config.OWNER, act.assigned_to == config.OWNER))
+    if not events:
+        held = card.task.refined or config.OWNER in card.assignees
+        return config.OWNER if held else config.LEAD
+    _, who, hold = max(events)
+    return config.OWNER if who == config.LEAD or hold else config.LEAD
+
 
 
 def _backlog(card: Card) -> str | None:
@@ -62,7 +78,7 @@ STATUS_ACTOR = {
     "Verify": lambda card: config.LEAD,  # A7: Verify without PR, the board is wrong
     "Done": lambda card: config.OWNER,  # A8: open but outside the flow
     None: lambda card: config.OWNER,  # A8
-    "Triage": _triage,
+    "Triage": triage_turn,
     "Backlog": _backlog,
 }
 

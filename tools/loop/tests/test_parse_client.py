@@ -58,6 +58,8 @@ def test_client_raises_on_graphql_errors():
 
 @pytest.mark.parametrize("body, order, files", [
     ("Branch: `wp/x`\nAllowed files: `a.py` `b/*`", True, ("a.py", "b/*")),
+    ("Branch: `wp/x`\n\n## Allowed files\n\n- `README.md`\n- `docs/*`\n", True,
+     ("README.md", "docs/*")),
     ("Branch: `wp/x` (base: `dev`)", False, ()),
     ("nothing", False, ()),
 ])

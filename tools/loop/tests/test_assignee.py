@@ -4,15 +4,15 @@ import pytest
 
 from loop.model import Activity
 from loop.rules.assignee import next_actor, plan, round_limit_pr
-from loop.tests.builders import DEV, LEAD, OWNER, REPO, board, card, pr, review
+from loop.tests.builders import DEV, LEAD, OWNER, REPO, ago, board, card, pr, review
 
-BY_OWNER = Activity(assigned_by=OWNER, assigned_to=LEAD)
+BY_OWNER = Activity(assigned_by=OWNER, assigned_to=LEAD, assigned_at=ago(30))
 THREE_ROUNDS = [review(LEAD, "CHANGES_REQUESTED")] * 3
 
 
 @pytest.mark.parametrize("given, expected", [
     (card(is_open=False), None),  # A1
-    (card(status="Triage", assignees=[LEAD], activity=BY_OWNER), LEAD),  # A2
+    (card(status="Triage", assignees=[LEAD], activity=BY_OWNER), LEAD),  # A9 owner asks Lead
     (card(status="Verify", assignees=[LEAD], activity=BY_OWNER, prs=[pr()]), LEAD),  # A2 > A3
     (card(status="Goal", assignees=[LEAD], activity=BY_OWNER), DEV),  # A2 not on Goal
     (card(status="Verify", prs=[pr(requested=(LEAD,))]), LEAD),  # A3 review requested
@@ -68,3 +68,25 @@ def test_round_limit_pr_names_the_pr():
     assert round_limit_pr(card(status="Verify", prs=[pr(*THREE_ROUNDS, number=12)])) == 12
     once = card(status="Verify", prs=[pr(review(LEAD, "CHANGES_REQUESTED"))])
     assert round_limit_pr(once) is None
+
+
+def triage(**act):
+    """A refined Triage card with this activity."""
+    return card(status="Triage", activity=Activity(**act))
+
+
+@pytest.mark.parametrize("given, expected", [
+    (triage(assigned_by=OWNER, assigned_to=LEAD, assigned_at=ago(30),
+            edited_by=LEAD, edited_at=ago(20)), OWNER),  # Lead refined after the request
+    (triage(edited_by=LEAD, edited_at=ago(20), commented_by=OWNER, commented_at=ago(10)),
+     LEAD),  # owner answers with a comment: Lead again
+    (triage(commented_by=OWNER, commented_at=ago(10), edited_by=OWNER, edited_at=ago(5)),
+     LEAD),  # owner edits the body: Lead
+    (triage(commented_by=LEAD, commented_at=ago(1), edited_by=OWNER, edited_at=ago(5)),
+     OWNER),  # Lead commented last: owner
+    (triage(assigned_by=OWNER, assigned_to=OWNER, assigned_at=ago(1),
+            commented_by=LEAD, commented_at=ago(10)), OWNER),  # owner takes it: holds
+])
+def test_triage_is_ping_pong_until_backlog(given, expected):
+    """Whoever acted last in Triage hands the turn to the other."""
+    assert next_actor(given) == expected

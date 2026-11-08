@@ -12,6 +12,9 @@ from datetime import datetime
 
 BRANCH_RE = re.compile(r"Branch:\s*`([^`]+)`(?:\s*\(base:\s*`([^`]+)`\))?")
 ALLOWED_RE = re.compile(r"Allowed files:(.*)")
+ALLOWED_SECTION_RE = re.compile(r"^#{1,6}[ \t]*Allowed files[ \t]*\n(?:[ \t]*\n)*"
+                                r"((?:[ \t]*[-*].*(?:\n|$))+)",
+                                re.MULTILINE | re.IGNORECASE)
 CLOSING_RE = re.compile(r"\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\b\s*:?\s*#\d+", re.IGNORECASE)
 
 
@@ -117,14 +120,20 @@ class Task:
 
     @property
     def allowed_files(self) -> tuple[str, ...]:
-        """Paths and globs of the Allowed files line."""
+        """Paths and globs of the Allowed files line, or of an ``## Allowed files`` bullet list."""
         line = ALLOWED_RE.search(self.body or "")
-        return tuple(re.findall(r"`([^`]+)`", line.group(1))) if line else ()
+        if line:
+            return tuple(re.findall(r"`([^`]+)`", line.group(1)))
+        section = ALLOWED_SECTION_RE.search(self.body or "")
+        items = section.group(1).splitlines() if section else []
+        return tuple(m for i in items for m in re.findall(r"`([^`]+)`", i) or [i.strip(" \t-*")])
 
     @property
     def has_order(self) -> bool:
-        """True if the dispatcher can start it: Branch line and Allowed files line."""
-        return self.branch is not None and "Allowed files:" in (self.body or "")
+        """True if the dispatcher can start it: Branch line and Allowed files line or list."""
+        body = self.body or ""
+        return self.branch is not None and bool("Allowed files:" in body
+                                                 or ALLOWED_SECTION_RE.search(body))
 
     @property
     def refined(self) -> bool:
@@ -141,6 +150,8 @@ class Activity:
     assigned_at: datetime | None = None
     commented_by: str | None = None  # author of the latest comment
     commented_at: datetime | None = None
+    edited_by: str | None = None  # editor of the latest body edit
+    edited_at: datetime | None = None
 
 
 @dataclass(frozen=True)

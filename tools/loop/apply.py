@@ -103,4 +103,7 @@ def apply(out: Decisions, writer: GitHubWriter, store: Store, now: datetime,
     added = _board(out, writer, store, now)
     _comments(out, writer, store, now)
     log = _starts(out, writer, store, now)
-    return added + store.due_notices(out.notices, now, full), log
+    lines = added + store.due_notices(out.notices, now, full)
+    for ref in out.board.add:  # its "Neu im Project" line went out now: not again next run
+        store.notices.setdefault(f"triage-new:{ref.url}", now.isoformat())
+    return lines, log

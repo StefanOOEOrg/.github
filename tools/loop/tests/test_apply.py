@@ -138,3 +138,14 @@ def test_reopened_done_card_goes_to_triage_and_stays_open(tmp_path):
     rec, _ = run(card(4, "Done", changed=ago(60), reopened_at=ago(1)), store_dir=tmp_path)
     joined = "\n".join(rec.calls)
     assert "o=oTriage" in joined and "state=closed" not in joined
+
+
+def test_issue_added_by_the_engine_is_not_reported_twice(tmp_path):
+    """The add run prints "Neu im Project"; the next run does not repeat it as triage-new."""
+    store = Store(tmp_path / "s.json")
+    out = decide(board(), set(), NOW, lambda repo: None)
+    out.board.add = [card(9, body="q").ref]
+    apply(out, GitHubWriter(recorder()), store, NOW, True)
+    out = decide(board(card(9, "Triage", body="q")), set(), NOW, lambda repo: None)
+    lines, _ = apply(out, GitHubWriter(recorder()), store, NOW, True)
+    assert not [line for line in lines if "Neu im Project" in line]

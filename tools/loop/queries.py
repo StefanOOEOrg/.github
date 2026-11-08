@@ -17,7 +17,7 @@ fragment PR on PullRequest {
 
 ISSUE_FIELDS = """
 fragment Issue on Issue {
-  id url number state closedAt body
+  id url number state closedAt body lastEditedAt editor { login }
   issueType { name }
   subIssues(first: 1) { totalCount }
   repository { nameWithOwner viewerPermission }
