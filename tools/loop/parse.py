@@ -55,7 +55,8 @@ def _activity(issue: dict) -> Activity:
     comment = ((issue.get("comments") or {}).get("nodes") or [None])[-1] or {}
     return Activity(_login(assigned.get("actor")), _login(assigned.get("assignee")),
                     when(assigned.get("createdAt")), _login(comment.get("author")),
-                    when(comment.get("createdAt")))
+                    when(comment.get("createdAt")), _login(issue.get("editor")),
+                    when(issue.get("lastEditedAt")))
 
 
 def _reopened(issue: dict) -> datetime | None:
