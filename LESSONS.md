@@ -4,6 +4,7 @@ Every process correction gets a line here (same PR as the correction, or a docs 
 
 | Date | Problem | Cause | Measure | Status |
 |---|---|---|---|---|
+| 2026-11-10 | Five refined Triage cards (Argus#109–#113) sat assigned to the Lead without any notice | an edit by the product owner hands the turn to the Lead (A9), but only a comment (W8) or his manual assignment (W9) was reported; the engine's own assignment of the Lead also counted as "told" | W17: a once-per-edit notice when the owner's edit of a Triage card is the latest signal and the turn is the Lead's; only the owner's assignment of the Lead counts as told | done |
 | 2026-11-10 | Nine "new in Triage" notices told the Lead about cards he had just filed (#84) | the notice did not know the issue's author | the engine reads the author; no "new in Triage" notice for a card the Lead filed himself | done |
 | 2026-11-08 | Two finished cards on Goal got a refinement request (Argus#35, #36; #80) | the rule saw "no Branch line" and not the merged PR | a merged linked PR turns the request into a one-time question to the Lead; the guard needs the `Closes #<task>` line, which W5 already enforces | done |
 | 2026-11-08 | An Action card with an open PR and no review request was watched by nothing (#75) | since #74 an open PR alone no longer ends a round, and D2 skipped every card with a PR | D2 also counts Action without job and without the Lead's review request as stuck; the comment names what is missing | done |

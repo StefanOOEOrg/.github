@@ -112,7 +112,7 @@ Assignee = whoever acts next, on the card **and** on its PR (kept up to date by 
 | Open without status, or Done but still open | Product owner: a gap the process must not hide |
 | Closed | Nobody |
 
-**Assignee = inbox.** Everything assigned to you is your next step. Decisions are written as comments: a comment of the product owner on an item assigned to the Lead, or a manual assignment to the Lead, reaches the Lead automatically. A manual assignment by the product owner wins over the automatic rule while the item is in Triage, Backlog or Verify.
+**Assignee = inbox.** Everything assigned to you is your next step. Decisions are written as comments: a comment of the product owner on an item assigned to the Lead, an edit of a Triage card that hands the turn to the Lead, or a manual assignment to the Lead, reaches the Lead automatically. A manual assignment by the product owner wins over the automatic rule while the item is in Triage, Backlog or Verify.
 
 ### Project workflows
 
@@ -198,7 +198,7 @@ The process is not changed through the process. `.github` is the outer loop: the
 - **Everyone:** the filter `assignee:@me` lists everything waiting for you.
 - **Product owner:** GitHub Mobile – review requests, `@StefanOOE` mentions and the *Reviewer guide* in every PR (what and why, design decisions, risky spots, where to start reading).
 - **Product owner:** a reminder comment on a PR that has waited more than 2 h only for the product owner's approval (repeated after 24 h at the earliest).
-- **Lead:** a watcher reports the Lead's inbox – review requests, approvals ready to merge, changes wanted by the product owner, their comments and manual assignments, new unrefined Triage cards (not the ones the Lead filed himself) – and what the assignee cannot show: tasks stalled on *Action*, *Verify* without a PR, PRs on Triage cards, PRs without a `Closes` line, issues missing from the project, merged `.github` PRs to review afterwards, and the retro. Open reports repeat every hour. A review request is worked off from the review pack in a fresh checker session (*Review context*), not inside the Lead's long session.
+- **Lead:** a watcher reports the Lead's inbox – review requests, approvals ready to merge, changes wanted by the product owner, their comments and manual assignments, their edits of a Triage card on the Lead's turn (once per edit), new unrefined Triage cards (not the ones the Lead filed himself) – and what the assignee cannot show: tasks stalled on *Action*, *Verify* without a PR, PRs on Triage cards, PRs without a `Closes` line, issues missing from the project, merged `.github` PRs to review afterwards, and the retro. Open reports repeat every hour. A review request is worked off from the review pack in a fresh checker session (*Review context*), not inside the Lead's long session.
 - **Delivery:** a delivery waits up to `cron.bot_chat_delivery_timeout_seconds` (1800 s) for the session that receives it. A turn that runs longer than that gets a degraded-delivery notice instead of a truncated report – that notice is expected; the full output stays in `cron/output/<job>/` and is listed by `hermes cron runs`.
 - **Chat** is used only for clarifying requirements; the outcome is written into the issue.
 

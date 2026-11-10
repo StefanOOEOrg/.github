@@ -122,3 +122,35 @@ def test_owner_comment_in_triage_reaches_the_lead():
 def test_owner_review_is_requested_by_the_engine(given, expected):
     """W4: the engine asks the owner once the Lead approved the current head."""
     assert owner_review_due(given) is expected
+
+
+def _keys(given) -> list[str]:
+    return [f.key.split(":")[0] for f in card_notices(given)]
+
+
+def test_owner_edit_in_triage_wakes_the_lead():
+    """W17: the owner edited a refined Triage card, the engine assigned the Lead: one notice."""
+    act = Activity(LEAD, LEAD, ago(1), edited_by=OWNER, edited_at=ago(5))
+    found = [f for f in card_notices(card(7, "Triage", assignees=[LEAD], activity=act))
+             if f.key.startswith("owner-edit:")]
+    assert len(found) == 1 and found[0].once is True
+    assert found[0].key == f"owner-edit:https://x/i7@{ago(5).isoformat()}"
+
+
+def test_owner_edit_followed_by_a_comment_is_only_w8():
+    """W17 steps back when the owner commented after the edit: W8 reports it."""
+    act = Activity(edited_by=OWNER, edited_at=ago(9), commented_by=OWNER, commented_at=ago(1))
+    assert _keys(card(8, "Triage", assignees=[LEAD], activity=act)) == ["owner-comment"]
+
+
+def test_owner_edit_on_the_owners_turn_is_silent():
+    """W17: the owner assigned himself after the edit and holds the turn (A9)."""
+    act = Activity(OWNER, OWNER, ago(1), edited_by=OWNER, edited_at=ago(9))
+    assert "owner-edit" not in _keys(card(9, "Triage", assignees=[OWNER], activity=act))
+
+
+def test_engine_assignment_of_the_lead_does_not_count_as_told():
+    """triage-new: only the owner's assignment of the Lead tells him (W9), not the engine's."""
+    act = Activity(assigned_by=LEAD, assigned_to=LEAD, assigned_at=ago(1))
+    given = card(10, "Triage", body="q", assignees=[LEAD], activity=act)
+    assert "triage-new" in _keys(given)

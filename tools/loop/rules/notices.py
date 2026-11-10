@@ -1,4 +1,4 @@
-"""inbox: notices to the Lead (W1..W3 per PR, W8, W9, W11 per card, W15 per merged .github PR)
+"""inbox: notices to the Lead (W1..W3 per PR, W8, W9, W11, W17 per card, W15 per merged .github PR)
 and W4, the owner's review request the engine posts itself.
 
 A notice is repeated after ``REMIND_MINUTES`` while it is still due, unless it is ``once``; that
@@ -49,7 +49,7 @@ def owner_review_due(pr: PullRequest) -> bool:
 
 
 def card_notices(card: Card) -> list[Finding]:
-    """W8, W9, W11: what a card needs from the Lead."""
+    """W8, W9, W11, W17: what a card needs from the Lead."""
     found = []
     act = card.activity
     name = f"{card.ref.repo}#{card.ref.number} {card.ref.url}"
@@ -62,9 +62,7 @@ def card_notices(card: Card) -> list[Finding]:
     if act.assigned_by == config.OWNER and act.assigned_to == config.LEAD and not answered:  # W9
         found.append(Finding(f"owner-assigned:{card.ref.url}@{act.assigned_at}",
                              f"Inbox – Stefan hat dir das zugewiesen: {name}"))
-    new = triage_new(card)
-    if new:
-        found.append(new)
+    found += [f for f in (triage_new(card), owner_edit(card, name)) if f]
     if card.state.status == "Goal" and not card.task.has_order and not card.task.is_feature:  # W11
         found.append(_refine(card, name))
     return found
@@ -83,14 +81,31 @@ def _refine(card: Card, name: str) -> Finding:
 def triage_new(card: Card) -> Finding | None:
     """A Triage card the Lead has to refine and was not told about otherwise (once)."""
     act = card.activity
-    told = act.assigned_to == config.LEAD or config.LEAD in (act.commented_by, act.edited_by,
-                                                            card.ref.author)
+    by_owner = act.assigned_by == config.OWNER and act.assigned_to == config.LEAD  # W9 tells him
+    told = by_owner or config.LEAD in (act.commented_by, act.edited_by, card.ref.author)
     if card.state.status != "Triage" or card.task.refined or told:
         return None
     if triage_turn(card) != config.LEAD:
         return None
     return Finding(f"triage-new:{card.ref.url}", f"Neu im Project (Triage): {card.ref.repo}#"
                    f"{card.ref.number} {card.ref.url}", once=True)
+
+
+def owner_edit(card: Card, name: str) -> Finding | None:
+    """W17: the owner edited a Triage card on the Lead's turn, no comment since (once per edit).
+
+    An edit hands the turn to the Lead like a comment does (A9), but W8 only sees comments.
+    """
+    act = card.activity
+    if card.state.status != "Triage" or act.edited_by != config.OWNER or not act.edited_at:
+        return None
+    if act.commented_at and act.commented_at >= act.edited_at:
+        return None  # a later comment: W8 reports it
+    if triage_turn(card) != config.LEAD:
+        return None
+    return Finding(f"owner-edit:{card.ref.url}@{act.edited_at.isoformat()}",
+                   f"Inbox – Stefan hat die Karte geändert (Triage), du bist dran: {name}",
+                   once=True)
 
 
 def post_merge(pr: PullRequest) -> Finding:
