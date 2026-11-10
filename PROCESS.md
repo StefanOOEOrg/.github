@@ -157,6 +157,7 @@ The loop engine sets these transitions; all of the project's built-in workflows 
 - PR linked and the Lead's review requested (end of a developer round) → **Verify**; an instance stays busy while its developer job is scheduled
 - the Lead's *changes requested* on the current head of an open PR, below the round limit → **Goal**, and the dispatcher starts the next round on the same instance; at the limit the card stays on Verify with the product owner
 - the end of a developer job triggers a full engine run (job watch), so a freed instance takes the next card within a minute
+- a failed engine run (GitHub unreachable after its retries, lock not free, crash) leaves a retry marker; the job watch turns it into a full run at most every 3 minutes until one succeeds, so a lost event waits minutes, not up to an hour; the Lead hears of it only if the failure lasts 30 minutes, and again when it is over
 - PR merged / item closed → **Done**
 - closed items are archived after 14 days
 - every open org issue that is missing from the project is added (status Triage), so no repository needs its own auto-add rule

@@ -5,9 +5,9 @@ architecture and the card states are in the [README](../README.md) and [PROCESS.
 
 | File | What it is |
 |---|---|
-| `loop/` | The loop engine, `python3 -m loop tick [--dry-run]`: reads what an event concerns (one card, or the whole board), decides with pure rules (`rules/`) and writes only the differences. Log `cache/loop.log`, the only local state `cache/loop-state.json` (what was already reported). Tests in `loop/tests/`. |
+| `loop/` | The loop engine, `python3 -m loop tick [--dry-run]`: reads what an event concerns (one card, or the whole board), decides with pure rules (`rules/`) and writes only the differences. Log `cache/loop.log`; local state `cache/loop-state.json` (what was already reported) and, after a failed run, the retry marker `cache/loop-retry.json`. Tests in `loop/tests/`. |
 | `loop-tick.sh` | Runs the engine once. No-agent cron `loop-tick` of the `sw-lead` profile: on every webhook event (route `loop`, event in `HERMES_CRON_EVENT`) and hourly. |
-| `loop-jobwatch.sh` | `python3 -m loop jobwatch`: a full engine run once a developer job has ended (its instance is free, but no GitHub event says so). No-agent cron `loop-jobwatch` of the `sw-lead` profile, every minute; silent and without GitHub calls while no job ended. |
+| `loop-jobwatch.sh` | `python3 -m loop jobwatch`: a full engine run once a developer job has ended (its instance is free, but no GitHub event says so). No-agent cron `loop-jobwatch` of the `sw-lead` profile, every minute; silent and without GitHub calls while no job ended. It also retries a failed run (see below). |
 | `install.sh` | Copies these files into `profiles/<profile>/scripts/`. Hermes only runs scripts from there, so the cron runs a copy: never edit it. Idempotent. |
 | `review-pack.py` | `review-pack.py <owner/repo> <pr>`: the review pack for one PR (task, why, CI, earlier findings, round, scope drift, matching lessons). Read-only. |
 | `gen-prozess-diagramm.py`, `gen-beitrag-diagramm.py`, `swimlane_svg.py` | Render the swimlanes in `assets/` (internal and external process). `gen-*.py [out_dir]`. |
@@ -71,6 +71,19 @@ flowchart TB
   classDef ours fill:#fff1e0,stroke:#ef6c00,color:#1b1b1b
   classDef patch fill:#e3f0fb,stroke:#1565c0,stroke-width:2px,stroke-dasharray:6 4,color:#1b1b1b
 ```
+
+### A failed run
+
+A run that fails – GitHub unreachable after the three gh attempts, the lock not free within
+10 minutes, a crash – loses the event that fired it. It exits 1 as before and leaves
+`cache/loop-retry.json` (first failure, last try, reason; `loop/retry.py`). The job watch, every
+minute, runs the engine over the whole board once the last failure is `LOOP_RETRY_MINUTES` (3)
+old, so a longer outage costs one try per 3 minutes, not three gh attempts per minute. A
+successful full run – the retry, a job end or the hourly run – removes the marker; a one-card run
+does not, as it may not cover the lost event. Silent unless the failure lasts
+`LOOP_RETRY_REPORT_MINUTES` (30): then one notice to the Lead, and one when the runs work again.
+That one notice exits 0, because Hermes delivers only a successful run's output to Bot Chat
+(`--failure-deliver local`).
 
 ## Install, test, change
 

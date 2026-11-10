@@ -40,6 +40,10 @@ OWNER_REPEAT_HOURS = 24  # approve reminder: then at most every (W6)
 REMIND_MINUTES = 60  # an open Lead notice is repeated after this long
 ARCHIVE_DAYS = 14  # Done and closed this long: archive the item
 
+# === RETRY OF A FAILED RUN (retry.py, carried out by the job watch) ===
+RETRY_MINUTES = int(os.getenv("LOOP_RETRY_MINUTES", "3"))  # at most one retry this often
+RETRY_REPORT_MINUTES = int(os.getenv("LOOP_RETRY_REPORT_MINUTES", "30"))  # then tell the Lead
+
 # === PROPOSALS (off until decided) ===
 # Verify -> Action when the linked PR was closed without a merge (design doc: proposal, not in use).
 VERIFY_BACK_TO_ACTION = os.getenv("LOOP_VERIFY_BACK_TO_ACTION") == "1"
