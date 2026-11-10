@@ -17,7 +17,7 @@ fragment PR on PullRequest {
 
 ISSUE_FIELDS = """
 fragment Issue on Issue {
-  id url number state closedAt body lastEditedAt editor { login }
+  id url number state closedAt body lastEditedAt editor { login } author { login }
   issueType { name }
   subIssues(first: 1) { totalCount }
   repository { nameWithOwner viewerPermission }
@@ -51,7 +51,7 @@ query($org: String!, $num: Int!, $after: String, $first: Boolean!, $prs: String!
   merged: search(query: $merged, type: ISSUE, first: 20) @include(if: $first) {
     nodes { ...PR } }
   openIssues: search(query: $issues, type: ISSUE, first: 100) @include(if: $first) {
-    nodes { ... on Issue { number url repository { nameWithOwner }
+    nodes { ... on Issue { number url author { login } repository { nameWithOwner }
       projectItems(first: 5) { nodes { project { number } } } } } }
 }""" + ISSUE_FIELDS + PR_FIELDS
 

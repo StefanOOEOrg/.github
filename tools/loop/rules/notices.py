@@ -66,15 +66,25 @@ def card_notices(card: Card) -> list[Finding]:
     if new:
         found.append(new)
     if card.state.status == "Goal" and not card.task.has_order and not card.task.is_feature:  # W11
-        found.append(Finding(f"refine:{card.ref.url}", "Inbox – auf Goal gezogen, aber nicht "
-                             f"verfeinert, jetzt verfeinern: {name}"))
+        found.append(_refine(card, name))
     return found
+
+
+def _refine(card: Card, name: str) -> Finding:
+    """W11: refine an unrefined Goal card, unless a linked PR is merged: then ask instead (#80)."""
+    merged = [p.ref.number for p in card.prs if p.state == "MERGED"]
+    if merged:
+        return Finding(f"merged-on-goal:{card.ref.url}", "plan: ⚠️ auf Goal, aber die Arbeit ist "
+                       f"schon gemergt (PR #{merged[0]}), schließen oder klären: {name}", once=True)
+    return Finding(f"refine:{card.ref.url}", "Inbox – auf Goal gezogen, aber nicht "
+                   f"verfeinert, jetzt verfeinern: {name}")
 
 
 def triage_new(card: Card) -> Finding | None:
     """A Triage card the Lead has to refine and was not told about otherwise (once)."""
     act = card.activity
-    told = act.assigned_to == config.LEAD or config.LEAD in (act.commented_by, act.edited_by)
+    told = act.assigned_to == config.LEAD or config.LEAD in (act.commented_by, act.edited_by,
+                                                            card.ref.author)
     if card.state.status != "Triage" or card.task.refined or told:
         return None
     if triage_turn(card) != config.LEAD:

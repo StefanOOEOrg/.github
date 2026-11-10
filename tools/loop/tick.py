@@ -19,8 +19,7 @@ from loop import config
 from loop.access import access_checker
 from loop.apply import apply
 from loop.engine import Decisions, card_decisions, decide
-from loop.github_client import GitHubClient, NotAnIssue
-from loop.model import Ref
+from loop.github_client import GitHubClient, NotAnIssue, NotFound, OffProject
 from loop.scope import Scope, scope_of
 from loop.store import Store
 from loop.writer import GitHubWriter
@@ -67,13 +66,23 @@ def decide_scope(client: GitHubClient, scope: Scope, now: datetime) -> Decisions
     except NotAnIssue:
         logger.info("%s#%s is a pull request: a comment on it changes no card", repo, number)
         return out
-    if card is None:
+    except NotFound:  # a 404 on the subject is not a failure of the run (#66)
+        logger.warning("skip: %s#%s not resolvable", repo, number)
+        return out
+    except OffProject as missing:
         if repo.split("/")[-1] != config.OUTER_LOOP_REPO:
-            out.board.add = [Ref(repo, number, f"https://github.com/{repo}/issues/{number}")]
+            out.board.add = [missing.ref]
         return out
     card_decisions(card, None, jobs, now, out)
     out.board.assignee = []  # the blocker rules need the board: a full run's job
     return out
+
+
+def summary(scope: Scope, out: Decisions, printed: int) -> str:
+    """The one line per run that is scanned: it never hides a write (#72)."""
+    return (f"run {scope.reason}: {len(out.board.status)} status, {len(out.board.assignee)} "
+            f"assignee, {len(out.board.close)} close(s), {len(out.starts)} start(s), "
+            f"{printed} notice(s) printed")
 
 
 def tick(dry_run: bool = False, full: bool = False) -> int:
@@ -89,7 +98,6 @@ def tick(dry_run: bool = False, full: bool = False) -> int:
             store.save(scope.full)
     for line in log:
         logger.info("%s", line)
-    logger.info("run %s: %d status, %d assignee, %d start(s), %d notice(s) printed", scope.reason,
-                len(out.board.status), len(out.board.assignee), len(out.starts), len(lines))
+    logger.info("%s", summary(scope, out, len(lines)))
     print("\n".join(lines))
     return 0

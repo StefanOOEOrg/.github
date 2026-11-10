@@ -27,6 +27,7 @@ class Ref:
     url: str = ""
     owner: str = ""  # PR: owner of the head repository (a fork if not the org)
     writable: bool = True  # the Lead may triage/write in this repository (assignees, status)
+    author: str = ""  # issue: who opened it (the Lead is not told about his own cards, #84)
 
 
 @dataclass(frozen=True)

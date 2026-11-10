@@ -60,8 +60,17 @@ def _board(out: Decisions, writer: GitHubWriter, store: Store, now: datetime) ->
             continue
         if item:
             _safely("status", writer.set_field, item, "Status", "Triage")
-        added.append(f"Neu im Project (Triage): {ref.repo}#{ref.number} {ref.url}")
+        if ref.author != config.LEAD:  # the Lead filed it himself: no news for him (#84)
+            added.append(f"Neu im Project (Triage): {ref.repo}#{ref.number} {ref.url}")
     return added
+
+
+def _stuck_text(card: Card) -> str:
+    """D2 handover: what is missing, a PR or the review request on the open PR (#75)."""
+    missing = (f"a review request on PR #{card.open_prs[0].ref.number}" if card.open_prs
+               else "a PR")
+    return (f"@{config.OWNER} Stuck: on Action for {config.STUCK_MINUTES} minutes without "
+            f"{missing} and without a developer job. Move it back to Goal to start it again.")
 
 
 def _comments(out: Decisions, writer: GitHubWriter, store: Store, now: datetime) -> None:
@@ -72,9 +81,7 @@ def _comments(out: Decisions, writer: GitHubWriter, store: Store, now: datetime)
                     "resolved.")
     for card in out.stuck:
         if store.first_comment(f"{card.ref.url}|stuck", now):
-            _safely("comment", writer.comment, card.ref,
-                    f"@{config.OWNER} Stuck: on Action for {config.STUCK_MINUTES} minutes without "
-                    "a PR and without a developer job. Move it back to Goal to start it again.")
+            _safely("comment", writer.comment, card.ref, _stuck_text(card))
             _safely("assignees", writer.assignees, card, {config.OWNER}, set())
     for pr in out.ask_owner:
         _safely("review request", writer.request_review, pr.ref, config.OWNER)
