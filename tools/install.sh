@@ -37,6 +37,7 @@ FILES=(
   loop/model.py
   loop/parse.py
   loop/queries.py
+  loop/retry.py
   loop/rules/__init__.py
   loop/rules/assignee.py
   loop/rules/checks.py

@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
-from loop import config
+from loop import config, retry
 from loop.access import access_checker
 from loop.apply import apply
 from loop.engine import Decisions, card_decisions, decide
@@ -96,6 +96,9 @@ def tick(dry_run: bool = False, full: bool = False) -> int:
         lines, log = apply(out, GitHubWriter(dry_run=dry_run), store, now, scope.full)
         if not dry_run:
             store.save(scope.full)
+            recovered = retry.clear(cache / retry.MARKER, now) if scope.full else None
+            if recovered:  # a failed run is caught up: no retry left (retry.py)
+                lines.append(recovered)
     for line in log:
         logger.info("%s", line)
     logger.info("%s", summary(scope, out, len(lines)))
