@@ -85,4 +85,10 @@ cd tools && uvx --with pytest pytest -q  # tests (CI: also ruff, pylint, bash -n
 After a merge that touches `tools/`: pause `loop-tick` (only while no developer job runs), run
 `install.sh`, check with `python3 -m loop tick --dry-run` in the profile's `scripts/`, resume.
 Change the files here, never the installed copy; no secrets, configuration comes from the
-profile's environment.
+profile's environment. Every variable and its default is in `loop/config.py`; the one switch that
+changes the state machine is `LOOP_VERIFY_BACK_TO_ACTION=1` – a Verify card goes back to Action
+when its PR was closed without a merge. It is off (a proposal, not in use).
+
+Every run logs one summary line, `run <event>: n status, n assignee, n close(s), n start(s), n
+notice(s) printed`; it counts every kind of write, so a run that wrote something never reads like
+a quiet one.
