@@ -1,7 +1,8 @@
 """One engine run: lock, scope, read, decide, apply, print the Lead's lines.
 
-Called as ``python3 -m loop tick`` from loop-tick.sh (Hermes cron, webhook-triggered and hourly).
-stdout is the delivery to the Lead; everything else goes to the log on stderr.
+``run_scope`` is the run itself, called in-process by the webhook listener (dispatcher.py), which
+hands the Lead's lines to its delivery thread. ``tick`` is ``python3 -m loop tick`` from
+loop-tick.sh (Hermes cron): there stdout is the delivery to the Lead; the log goes to stderr.
 """
 
 from __future__ import annotations
@@ -85,10 +86,9 @@ def summary(scope: Scope, out: Decisions, printed: int) -> str:
             f"{printed} notice(s) printed")
 
 
-def tick(dry_run: bool = False, full: bool = False) -> int:
-    """The run; 0 on success. ``full`` reads the whole board whatever the trigger was."""
+def run_scope(scope: Scope, dry_run: bool = False) -> list[str]:
+    """One engine run over ``scope``; the Lead's lines. Raises GitHubError, TimeoutError."""
     now = datetime.now(UTC)
-    scope = Scope(None, "full") if full else scope_of(os.environ.get("HERMES_CRON_EVENT"))
     cache = Path(config.CACHE_DIR)
     with run_lock(cache / "loop.lock"):
         out = decide_scope(GitHubClient(), scope, now)
@@ -102,5 +102,11 @@ def tick(dry_run: bool = False, full: bool = False) -> int:
     for line in log:
         logger.info("%s", line)
     logger.info("%s", summary(scope, out, len(lines)))
-    print("\n".join(lines))
+    return lines
+
+
+def tick(dry_run: bool = False, full: bool = False) -> int:
+    """The cron run; 0 on success. ``full`` reads the whole board whatever the trigger was."""
+    scope = Scope(None, "full") if full else scope_of(os.environ.get("HERMES_CRON_EVENT"))
+    print("\n".join(run_scope(scope, dry_run)))
     return 0

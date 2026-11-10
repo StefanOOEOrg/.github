@@ -58,3 +58,25 @@ WS_ROOT = os.getenv("WS_ROOT", "/home/hermes/workspaces")
 DEV_PROFILE = "sw-developer"
 DEV_SKILL = "sw-developer-workflow"
 LOCK_WAIT_SECONDS = 600  # a second run waits for the first, then gives up quietly
+
+# === WEBHOOK LISTENER (listener.py, dispatcher.py; `python3 -m loop listen`) ===
+# The secret is read at start from LOOP_WEBHOOK_SECRET or the file LOOP_WEBHOOK_SECRET_FILE.
+LISTEN_HOST = os.getenv("LOOP_LISTEN_HOST", "127.0.0.1")  # Tailscale Funnel proxies to it
+LISTEN_PORT = int(os.getenv("LOOP_LISTEN_PORT", "8655"))
+LISTEN_PATH = os.getenv("LOOP_LISTEN_PATH", "")  # "": every path (the HMAC check guards it)
+MAX_BODY_BYTES = 10 * 1024 * 1024  # GitHub caps a payload at 25 MB; ours are a few KB
+DEDUPE_DELIVERIES = 5000  # X-GitHub-Delivery IDs remembered against redeliveries
+BACKOFF_FIRST_SECONDS = 5  # a failed run: the next try after this, doubled up to
+BACKOFF_MAX_SECONDS = int(os.getenv("LOOP_BACKOFF_MAX_SECONDS", "300"))
+# a full run on the clock: the time rules (D2 stuck, W6 reminders, repeats, archive) need one even
+# without events, and it catches a webhook GitHub failed to deliver; 0 switches it off
+FULL_RUN_MINUTES = int(os.getenv("LOOP_FULL_RUN_MINUTES", "60"))
+SHUTDOWN_SECONDS = 90  # SIGTERM: time for the last run and the open deliveries
+
+# === DELIVERY TO THE LEAD (delivery.py, outbox.py) ===
+# Listener side: a command that takes one message on stdin; exit 0 means accepted.
+DELIVER_CMD = os.getenv("LOOP_DELIVER_CMD", "python3 -m loop deliver")
+DELIVER_TIMEOUT_SECONDS = 60
+# Default command: spool into cache/outbox, then fire the no-agent cron `loop-deliver`
+# (--deliver bot-chat:sw-lead), whose script prints and removes the spool.
+OUTBOX_TRIGGER = os.getenv("LOOP_OUTBOX_TRIGGER", "hermes -p sw-lead cron run loop-deliver")
