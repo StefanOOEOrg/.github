@@ -1,7 +1,10 @@
 """One engine run: lock, scope, read, decide, apply, print the Lead's lines.
 
-Called as ``python3 -m loop tick`` from loop-tick.sh (Hermes cron, webhook-triggered and hourly).
-stdout is the delivery to the Lead; everything else goes to the log on stderr.
+``run_scope`` is the run itself, called in-process by the listener (dispatcher.py), which hands
+the Lead's lines to its delivery thread. ``tick`` is ``python3 -m loop tick`` from loop-tick.sh
+(Hermes cron): its signal comes from ``HermesCronSource`` (``HERMES_CRON_EVENT``), its lines go to
+the output sink ``LOOP_TICK_SINK`` (default stdout, which Hermes delivers to the Lead); the log
+goes to stderr.
 """
 
 from __future__ import annotations
@@ -9,7 +12,6 @@ from __future__ import annotations
 import fcntl
 import json
 import logging
-import os
 import time
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -20,7 +22,11 @@ from loop.access import access_checker
 from loop.apply import apply
 from loop.engine import Decisions, card_decisions, decide
 from loop.github_client import GitHubClient, NotAnIssue, NotFound, OffProject
-from loop.scope import Scope, scope_of
+from loop.ports import OutputSink
+from loop.scope import Scope, scope_for
+from loop.signals import full_run
+from loop.sinks import StdoutSink
+from loop.sources.hermes_cron import HermesCronSource
 from loop.store import Store
 from loop.writer import GitHubWriter
 
@@ -85,10 +91,9 @@ def summary(scope: Scope, out: Decisions, printed: int) -> str:
             f"{printed} notice(s) printed")
 
 
-def tick(dry_run: bool = False, full: bool = False) -> int:
-    """The run; 0 on success. ``full`` reads the whole board whatever the trigger was."""
+def run_scope(scope: Scope, dry_run: bool = False) -> list[str]:
+    """One engine run over ``scope``; the Lead's lines. Raises GitHubError, TimeoutError."""
     now = datetime.now(UTC)
-    scope = Scope(None, "full") if full else scope_of(os.environ.get("HERMES_CRON_EVENT"))
     cache = Path(config.CACHE_DIR)
     with run_lock(cache / "loop.lock"):
         out = decide_scope(GitHubClient(), scope, now)
@@ -102,5 +107,16 @@ def tick(dry_run: bool = False, full: bool = False) -> int:
     for line in log:
         logger.info("%s", line)
     logger.info("%s", summary(scope, out, len(lines)))
-    print("\n".join(lines))
+    return lines
+
+
+def tick(dry_run: bool = False, full: bool = False, sink: OutputSink | None = None) -> int:
+    """The cron run; 0 on success. ``full`` reads the whole board whatever the trigger was.
+
+    The lines go to ``sink`` (default stdout); a run without lines delivers nothing.
+    """
+    signal = full_run("full") if full else HermesCronSource().read()
+    lines = run_scope(scope_for(signal), dry_run)
+    if not (sink or StdoutSink()).deliver_lines(lines):
+        logger.error("the output sink refused the run's %d line(s)", len(lines))
     return 0

@@ -22,6 +22,9 @@ set -euo pipefail
 FILES=(
   loop-tick.sh
   loop-jobwatch.sh
+  loop-deliver.sh
+  systemd/loop-listener.service
+  systemd/loop-listener.env.example
   review-pack.py
   gen-prozess-diagramm.py
   gen-beitrag-diagramm.py
@@ -31,11 +34,17 @@ FILES=(
   loop/access.py
   loop/apply.py
   loop/config.py
+  loop/delivery.py
+  loop/dispatcher.py
   loop/engine.py
+  loop/events.py
   loop/github_client.py
   loop/jobwatch.py
+  loop/listener.py
   loop/model.py
+  loop/outbox.py
   loop/parse.py
+  loop/ports.py
   loop/queries.py
   loop/retry.py
   loop/rules/__init__.py
@@ -45,9 +54,19 @@ FILES=(
   loop/rules/notices.py
   loop/rules/status.py
   loop/scope.py
+  loop/service.py
+  loop/signals.py
+  loop/sinks.py
+  loop/sources/__init__.py
+  loop/sources/github_webhook.py
+  loop/sources/hermes_cron.py
+  loop/sources/jobwatch.py
+  loop/sources/polling.py
+  loop/sources/timer.py
   loop/starter.py
   loop/store.py
   loop/tick.py
+  loop/wiring.py
   loop/writer.py
 )
 
@@ -165,3 +184,9 @@ if [[ "$dry_run" -eq 0 ]]; then
 fi
 
 echo "target: $target"
+# The listener runs the installed copy too: a change reaches it only after a restart. The unit file
+# itself is installed by root (see systemd/loop-listener.service).
+if [[ "$dry_run" -eq 0 ]] && command -v systemctl > /dev/null \
+  && systemctl is-active --quiet loop-listener 2> /dev/null; then
+  echo "loop-listener is running: restart it to load the new code (sudo systemctl restart loop-listener)"
+fi

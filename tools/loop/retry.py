@@ -51,8 +51,11 @@ def _minutes(since: datetime, now: datetime) -> int:
     return int((now - since).total_seconds() // 60)
 
 
-def record(path: Path, reason: str, now: datetime) -> str | None:
-    """Remember a failed run; returns the Lead's notice once it fails ``RETRY_REPORT_MINUTES``."""
+def record(path: Path, reason: str, now: datetime, retrying: str | None = None) -> str | None:
+    """Remember a failed run; returns the Lead's notice once it fails ``RETRY_REPORT_MINUTES``.
+
+    ``retrying`` says who retries how often (default: the job watch).
+    """
     old = _read(path) or {}
     since = _time(old.get("since"), now) or now
     marker = {"since": since.isoformat(), "last_try": now.isoformat(), "reason": reason[:300],
@@ -62,7 +65,8 @@ def record(path: Path, reason: str, now: datetime) -> str | None:
     if not marker["reported"] and minutes >= config.RETRY_REPORT_MINUTES:
         marker["reported"] = True
         notice = (f"Loop-Engine: Läufe scheitern seit {minutes} min ({since:%H:%M} UTC): "
-                  f"{reason[:200]}. Der Job-Watch versucht es alle {config.RETRY_MINUTES} min.")
+                  f"{reason[:200]}. "
+                  f"{retrying or f'Der Job-Watch versucht es alle {config.RETRY_MINUTES} min.'}")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(marker))
     logger.info("failed run recorded for a retry (failing for %d min)", minutes)

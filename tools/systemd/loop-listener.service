@@ -1,0 +1,38 @@
+# Webhook listener of The Loop: `python3 -m loop listen` (tools/loop/service.py).
+# GitHub org webhook -> Tailscale Funnel -> 127.0.0.1:8655 -> queue -> loop engine, serially.
+#
+# Install (as root, after tools/install.sh copied the scripts into the profile):
+#   install -m 644 /home/hermes/.hermes/profiles/sw-lead/scripts/systemd/loop-listener.service \
+#     /etc/systemd/system/loop-listener.service
+#   systemctl daemon-reload && systemctl enable --now loop-listener
+# Settings: /home/hermes/.hermes/profiles/sw-lead/loop-listener.env (mode 600, owner hermes),
+# at least LOOP_WEBHOOK_SECRET_FILE=<file with the org webhook secret>; every other variable and
+# its default is in tools/loop/config.py.
+
+[Unit]
+Description=The Loop webhook listener (sw-lead)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes
+Group=hermes
+WorkingDirectory=/home/hermes/.hermes/profiles/sw-lead/scripts
+# the profile's environment, as Hermes gives it to the cron jobs (GH_CONFIG_DIR, logins, ...)
+EnvironmentFile=-/home/hermes/.hermes/profiles/sw-lead/.env
+EnvironmentFile=/home/hermes/.hermes/profiles/sw-lead/loop-listener.env
+# hermes and gh live in the user's local bin
+Environment=PATH=/home/hermes/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 -m loop listen
+StandardOutput=append:/home/hermes/.hermes/profiles/sw-lead/cache/loop.log
+StandardError=append:/home/hermes/.hermes/profiles/sw-lead/cache/loop.log
+Restart=always
+RestartSec=10
+KillSignal=SIGTERM
+# SHUTDOWN_SECONDS (90) for the deliveries plus a last engine run
+TimeoutStopSec=180
+
+[Install]
+WantedBy=multi-user.target

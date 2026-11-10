@@ -1,4 +1,4 @@
-"""Command line: ``python3 -m loop tick|jobwatch [--dry-run]``.
+"""Command line: ``python3 -m loop tick|jobwatch [--dry-run]``, ``listen``, ``deliver``, ``outbox``.
 
 Run from the profile's scripts directory, where install.sh puts the package.
 """
@@ -10,7 +10,7 @@ import logging
 import sys
 from datetime import UTC, datetime
 
-from loop import retry
+from loop import outbox, retry, service, wiring
 from loop.github_client import GitHubError
 from loop.jobwatch import jobwatch
 from loop.tick import tick
@@ -25,6 +25,9 @@ def parse(argv: list[str] | None) -> argparse.Namespace:
     watch = sub.add_parser("jobwatch",
                            help="a full run once a developer job has ended or a run failed")
     watch.add_argument("--dry-run", action="store_true", help="decide and log, write nothing")
+    sub.add_parser("listen", help="the webhook listener service (systemd loop-listener)")
+    sub.add_parser("deliver", help="stdin into the outbox, fire the cron loop-deliver")
+    sub.add_parser("outbox", help="print and empty the outbox (script of loop-deliver)")
     return parser.parse_args(argv)
 
 
@@ -37,10 +40,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parse(argv)
     logging.basicConfig(level=logging.INFO, stream=sys.stderr,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    if args.command == "listen":
+        return service.serve()
+    if args.command in ("deliver", "outbox"):
+        return outbox.main(args.command)
+    sink = wiring.tick_sink()  # LOOP_TICK_SINK, default stdout (Hermes delivers it)
     failure, code, notice = "crashed", 1, None  # a crash leaves failure in place
     try:
-        code = jobwatch(dry_run=args.dry_run) if args.command == "jobwatch" else tick(
-            dry_run=args.dry_run)
+        code = jobwatch(dry_run=args.dry_run, sink=sink) if args.command == "jobwatch" else tick(
+            dry_run=args.dry_run, sink=sink)
         failure = f"exit {code}" if code else ""
     except (GitHubError, TimeoutError) as error:
         logging.getLogger("loop").error("run failed: %s", error)
@@ -49,7 +57,7 @@ def main(argv: list[str] | None = None) -> int:
         if failure and not args.dry_run:
             notice = retry.record(retry.marker_path(), failure, datetime.now(UTC))
     if notice:
-        print(notice)
+        sink.deliver(notice)
         return 0
     return code
 
