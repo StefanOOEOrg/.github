@@ -41,7 +41,7 @@ orange our code, red the human.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
-  <img alt="Architecture of The Loop: the product owner works on GitHub; the org webhook reaches the Hermes gateway through Tailscale Funnel; route and cron run the loop engine, which reads and writes the board, starts developer jobs and sends notices to the Lead" src="docs/diagrams/architecture-light.svg">
+  <img alt="Architecture of The Loop: the product owner works on GitHub; the org webhook reaches the loop listener through Tailscale Funnel; its signal sources feed one serial queue and dispatcher, which runs the loop engine; the engine reads and writes the board, starts developer jobs, and its output sink hands notices to the Hermes cron loop-deliver, which delivers them to the Lead" src="docs/diagrams/architecture-light.svg">
 </picture>
 
 <details>

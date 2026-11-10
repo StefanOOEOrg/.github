@@ -44,6 +44,7 @@ FILES=(
   loop/model.py
   loop/outbox.py
   loop/parse.py
+  loop/ports.py
   loop/queries.py
   loop/retry.py
   loop/rules/__init__.py
@@ -54,9 +55,18 @@ FILES=(
   loop/rules/status.py
   loop/scope.py
   loop/service.py
+  loop/signals.py
+  loop/sinks.py
+  loop/sources/__init__.py
+  loop/sources/github_webhook.py
+  loop/sources/hermes_cron.py
+  loop/sources/jobwatch.py
+  loop/sources/polling.py
+  loop/sources/timer.py
   loop/starter.py
   loop/store.py
   loop/tick.py
+  loop/wiring.py
   loop/writer.py
 )
 

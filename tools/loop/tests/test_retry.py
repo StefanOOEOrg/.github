@@ -9,7 +9,6 @@ from loop import __main__ as cli
 from loop import jobwatch, retry, tick
 from loop.engine import Decisions
 from loop.github_client import GitHubError
-from loop.scope import Scope
 
 T0 = datetime(2026, 11, 10, 7, 18, tzinfo=UTC)
 
@@ -76,13 +75,13 @@ def test_jobwatch_retries_a_failed_run_as_a_full_run(cache, monkeypatch, age, ru
     """The job watch turns a due marker into a full run, even with no job ended."""
     retry.record(cache / retry.MARKER, "x", T0)
     called = []
-    monkeypatch.setattr(jobwatch, "tick", lambda dry_run, full: called.append(full) or 0)
+    monkeypatch.setattr(jobwatch, "tick", lambda dry_run, full, sink: called.append(full) or 0)
     assert jobwatch.jobwatch(now=T0 + timedelta(minutes=age)) == 0 and called == runs
 
 
 def failing(error):
     """A run that raises ``error``."""
-    def run(dry_run=False):
+    def run(dry_run=False, sink=None):
         raise error
     return run
 
@@ -122,7 +121,8 @@ def test_the_notice_of_a_long_failure_exits_0_to_reach_the_lead(cache, monkeypat
 def test_only_a_successful_full_run_removes_the_marker(cache, monkeypatch, full, kept):
     """A one-card run may not cover the lost event; the full run does."""
     retry.record(cache / retry.MARKER, "x", T0)
-    monkeypatch.setattr(tick, "scope_of", lambda event: Scope(("O/r", 1), "issues.edited"))
+    monkeypatch.setenv("HERMES_CRON_EVENT", '{"event": "issues", "action": "opened", '
+                       '"repo": "O/r", "issue": "1"}')
     monkeypatch.setattr(tick, "GitHubClient", lambda: None)
     monkeypatch.setattr(tick, "decide_scope", lambda client, scope, now: Decisions())
     monkeypatch.setattr(tick, "GitHubWriter", lambda dry_run: None)

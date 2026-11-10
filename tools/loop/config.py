@@ -80,3 +80,15 @@ DELIVER_TIMEOUT_SECONDS = 60
 # Default command: spool into cache/outbox, then fire the no-agent cron `loop-deliver`
 # (--deliver bot-chat:sw-lead), whose script prints and removes the spool.
 OUTBOX_TRIGGER = os.getenv("LOOP_OUTBOX_TRIGGER", "hermes -p sw-lead cron run loop-deliver")
+
+# === SIGNAL SOURCES AND OUTPUT SINKS (ports.py; wiring.py picks them, the names are its registry)
+# `listen`: comma-separated signal sources, all feeding the one serial queue
+# (webhook | timer | jobwatch | hermes-cron); the default is the listener as it was built
+SOURCES = os.getenv("LOOP_SOURCES", "webhook,timer")
+# `listen`: output, behind the delivery thread (command | hermes-outbox | stdout | file);
+# command = LOOP_DELIVER_CMD, whose default is the outbox + loop-deliver path
+SINK = os.getenv("LOOP_SINK", "command")
+# `tick`, `jobwatch` (Hermes cron runs): output; stdout is what Hermes delivers to the Lead
+TICK_SINK = os.getenv("LOOP_TICK_SINK", "stdout")
+JOBWATCH_SECONDS = int(os.getenv("LOOP_JOBWATCH_SECONDS", "60"))  # source jobwatch: one look per
+FILE_SINK = os.getenv("LOOP_FILE_SINK", os.path.join(CACHE_DIR, "loop-out.txt"))  # sink file

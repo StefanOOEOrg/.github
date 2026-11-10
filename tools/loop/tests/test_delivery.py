@@ -4,6 +4,7 @@ import sys
 import threading
 
 from loop import delivery, outbox
+from loop.sinks import CommandSink
 
 
 def test_put_never_waits_for_the_lead(tmp_path):
@@ -55,10 +56,10 @@ def test_command_sender_passes_stdin_and_reads_the_exit_code(tmp_path):
     """The command gets the message on stdin; exit 0 means accepted."""
     target = tmp_path / "out.txt"
     script = f"import sys; open({str(target)!r}, 'w').write(sys.stdin.read())"
-    assert delivery.command_sender(f"{sys.executable} -c \"{script}\"", 10)("hallo")
+    assert CommandSink(f"{sys.executable} -c \"{script}\"", 10).deliver("hallo")
     assert target.read_text() == "hallo"
-    assert not delivery.command_sender(f"{sys.executable} -c 'raise SystemExit(3)'", 10)("x")
-    assert not delivery.command_sender("/nonexistent/command", 10)("x")
+    assert not CommandSink(f"{sys.executable} -c 'raise SystemExit(3)'", 10).deliver("x")
+    assert not CommandSink("/nonexistent/command", 10).deliver("x")
 
 
 def test_outbox_spools_in_order_and_drains_once(tmp_path):

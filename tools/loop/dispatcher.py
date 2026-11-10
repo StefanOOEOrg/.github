@@ -1,6 +1,9 @@
-"""Dispatcher of the webhook listener: one engine run at a time, in event-time order, none lost.
+"""Dispatcher of the listener: one engine run at a time, in event-time order, no signal lost.
 
-Guarantee: an accepted event leaves the queue only through a successful engine run that started
+It knows only the ports (ports.py): every signal source submits into the same queue, whatever
+it is (webhook, clock, job watch, ...), and the lines go to a ``Deliver`` callable.
+
+Guarantee: an accepted signal leaves the queue only through a successful engine run that started
 after it was queued. Events queued while a run is in flight wait for the next run. A failed run
 (GitHubError, TimeoutError, OSError) puts its events back and waits ``BACKOFF_FIRST_SECONDS``,
 doubled up to ``BACKOFF_MAX_SECONDS``; events never get dropped. Any other error ends the process
@@ -19,13 +22,13 @@ import queue
 import threading
 from collections import OrderedDict
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 from loop import config, retry
-from loop.events import Event
 from loop.github_client import GitHubError
-from loop.scope import Scope
+from loop.scope import Scope, scope_for
+from loop.signals import Signal, now_utc
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +38,6 @@ RETRYING = "Der Listener versucht es mit Backoff weiter, kein Event geht verlore
 
 Engine = Callable[[Scope], list[str]]
 Deliver = Callable[[str], None]
-
-
-def now_utc() -> datetime:
-    """The current time (a function, so tests can replace it)."""
-    return datetime.now(UTC)
 
 
 class RecentIds(OrderedDict[str, None]):
@@ -61,7 +59,7 @@ class RecentIds(OrderedDict[str, None]):
 
 
 class Dispatcher:
-    """Queue of accepted events and the serial engine runs over it."""
+    """Queue of accepted signals and the serial engine runs over it."""
 
     def __init__(self, engine: Engine, deliver: Deliver, clock: Callable[[], datetime] = now_utc,
                  ) -> None:
@@ -71,12 +69,13 @@ class Dispatcher:
         self._sequence = itertools.count()  # ties in event time keep the order of receipt
         self.backoff = 0.0  # seconds to wait before the next run, 0 after a success
 
-    def submit(self, event: Event) -> bool:
-        """Queue an event; False for a delivery already seen (a redelivery)."""
-        if not self._seen.add(event.delivery):
+    def submit(self, signal: Signal) -> bool:
+        """Queue a signal (the port ``Submit``); False for a delivery already seen."""
+        if not self._seen.add(signal.delivery_id):
             return False
-        self._queue.put((event.at, next(self._sequence), event))
-        logger.info("queued %s (%s)", event.delivery, event.scope.reason)
+        self._queue.put((signal.occurred_at, next(self._sequence), signal))
+        logger.info("queued %s from %s (%s)", signal.delivery_id, signal.source,
+                    scope_for(signal).reason)
         return True
 
     def pending(self) -> int:
@@ -85,7 +84,7 @@ class Dispatcher:
 
     def waiting(self) -> list[str]:
         """The delivery IDs waiting, in the order the next run takes them."""
-        return [entry[2].delivery for entry in sorted(self._queue.queue, key=lambda e: e[:2])]
+        return [entry[2].delivery_id for entry in sorted(self._queue.queue, key=lambda e: e[:2])]
 
     def _take(self, timeout: float) -> list[tuple]:
         """Every waiting event, oldest event time first; [] if none came within ``timeout``."""
@@ -104,9 +103,10 @@ class Dispatcher:
         batch = self._take(timeout)
         if not batch:
             return None
-        events = [entry[2] for entry in batch]
-        scope = events[0].scope if len(events) == 1 else Scope(None, f"{len(events)} events")
-        ids = ", ".join(event.delivery for event in events)
+        signals = [entry[2] for entry in batch]
+        scope = scope_for(signals[0]) if len(signals) == 1 else Scope(
+            None, f"{len(signals)} events")
+        ids = ", ".join(signal.delivery_id for signal in signals)
         logger.info("run %s for %s", scope.reason, ids)
         try:
             lines = self._engine(scope)
@@ -148,7 +148,7 @@ class Dispatcher:
         """
         if not self.pending() or self.run_once(timeout=0) is not False:
             return []
-        left = [entry[2].delivery for entry in self._take(0)]
+        left = [entry[2].delivery_id for entry in self._take(0)]
         logger.error("shutdown with %d event(s) not run: %s; the full run at the next start "
                      "covers them", len(left), ", ".join(left))
         return left

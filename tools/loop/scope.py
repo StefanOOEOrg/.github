@@ -1,18 +1,16 @@
-"""Scope of a run from the webhook event (Hermes patch A: ``HERMES_CRON_EVENT``).
-
-The route renders a JSON line of signals; Hermes prefixes it with a sentence, so the last line
-that parses as JSON is the event. Unresolved template fields stay as ``{field}`` and count as
-missing. Without a usable event the run is full: the hourly run and a coalesced re-fire.
+"""Scope of an engine run: the whole board or one card, from a signal (signals.py).
 
 Only events that cannot change another card are narrowed to one card. Everything that can start
 a card (status, PR opened or closed, issue closed or edited, assignments) reads the whole board:
-dispatch and the blocker rules need it.
+dispatch and the blocker rules need it. A signal without a subject (start, clock, job end, a cron
+run without an event) is a full run.
 """
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
+
+from loop.signals import Signal, now_utc, parse_context, subject_of
 
 CARD_ONLY = {("issue_comment", "created"), ("issues", "opened"), ("issues", "reopened")}
 
@@ -30,28 +28,18 @@ class Scope:
         return self.card is None
 
 
-def _value(event: dict, key: str) -> str:
-    value = str(event.get(key) or "")
-    return "" if value.startswith("{") else value
-
-
-def parse_event(context: str | None) -> dict:
-    """The signal JSON of the trigger context, {} if there is none."""
-    for line in reversed((context or "").strip().splitlines()):
-        try:
-            event = json.loads(line)
-        except ValueError:
-            continue
-        if isinstance(event, dict):
-            return event
-    return {}
+def scope_for(signal: Signal) -> Scope:
+    """The scope this signal alone needs."""
+    subject = signal.subject
+    if subject is None:
+        return Scope(None, signal.delivery_id or "full")
+    reason = f"{subject.kind}.{subject.action}"
+    if (subject.kind, subject.action) in CARD_ONLY and subject.repo and subject.issue.isdigit():
+        return Scope((subject.repo, int(subject.issue)), reason)
+    return Scope(None, reason)
 
 
 def scope_of(context: str | None) -> Scope:
-    """The scope this trigger needs."""
-    event = parse_event(context)
-    kind, action = _value(event, "event"), _value(event, "action")
-    repo, issue = _value(event, "repo"), _value(event, "issue")
-    if (kind, action) in CARD_ONLY and repo and issue.isdigit():
-        return Scope((repo, int(issue)), f"{kind}.{action}")
-    return Scope(None, f"{kind}.{action}" if kind else "full")
+    """The scope of a trigger context (the route JSON, as in ``HERMES_CRON_EVENT``)."""
+    subject = subject_of(parse_context(context))
+    return scope_for(Signal("context", "" if subject else "full", now_utc(), subject))

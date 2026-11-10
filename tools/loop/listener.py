@@ -13,18 +13,15 @@ import hmac
 import json
 import logging
 import os
-from collections.abc import Callable
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from loop import config
-from loop.events import Event, accept, rejection
+from loop.events import accept, rejection
+from loop.ports import Submit
 
 logger = logging.getLogger(__name__)
-
-Submit = Callable[[Event], bool]
-
 
 def load_secret() -> bytes:
     """The webhook secret from LOOP_WEBHOOK_SECRET or LOOP_WEBHOOK_SECRET_FILE; never logged."""
@@ -99,12 +96,12 @@ class WebhookHandler(BaseHTTPRequestHandler):
         if not isinstance(payload, dict) or not delivery:
             self._answer(400, "no delivery")
             return
-        event = accept(kind, delivery, payload, datetime.now(UTC))
-        if event is None:
+        signal = accept(kind, delivery, payload, datetime.now(UTC))
+        if signal is None:
             logger.info("ignored %s %s: %s", delivery, kind, rejection(kind, payload))
             self._answer(200, "ignored")
             return
-        self._answer(202, "queued" if self.server.submit(event) else "duplicate")
+        self._answer(202, "queued" if self.server.submit(signal) else "duplicate")
 
     do_POST = handle_post  # the name http.server dispatches to
 

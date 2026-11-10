@@ -2,7 +2,6 @@
 
 import sys
 import threading
-from types import SimpleNamespace
 
 from loop import service
 
@@ -25,19 +24,3 @@ def test_start_runs_the_whole_board_and_stop_ends_cleanly(tmp_path, monkeypatch)
     assert service.serve(engine, stop) == 0
     assert len(scopes) == 1 and scopes[0].full
     assert out.read_text() == "Notiz an den Lead"
-
-
-
-
-def test_the_clock_queues_full_runs_until_stopped():
-    """Every interval one full-run event until stop; 0 switches the clock off."""
-    stop, queued = threading.Event(), []
-
-    def submit(event):
-        queued.append(event)
-        if len(queued) == 2:
-            stop.set()
-    service.clock(SimpleNamespace(submit=submit), stop, seconds=0)
-    assert not queued
-    service.clock(SimpleNamespace(submit=submit), stop, seconds=0.01)
-    assert len(queued) == 2 and all(event.scope.full for event in queued)

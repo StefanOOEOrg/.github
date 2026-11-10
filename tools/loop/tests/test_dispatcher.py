@@ -6,17 +6,16 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from loop import dispatcher, service
-from loop.events import Event
 from loop.github_client import GitHubError
+from loop.signals import Signal, Subject
 
 T0 = datetime(2026, 11, 10, 10, 49, tzinfo=UTC)
 
 
 def event(delivery, minute=0, issue="109", action="created", kind="issue_comment"):
-    """An accepted event at T0 + ``minute``."""
-    return Event(delivery, T0 + timedelta(minutes=minute), {
-        "event": kind, "action": action, "repo": "StefanOOEOrg/Argus", "issue": issue,
-        "pr": "", "item": "", "sender": "StefanOOE"})
+    """An accepted webhook signal at T0 + ``minute``."""
+    return Signal("webhook", delivery, T0 + timedelta(minutes=minute),
+                  Subject(kind, action, "StefanOOEOrg/Argus", issue, sender="StefanOOE"))
 
 
 def fake_engine(failures=0, lines=("line",)):
@@ -130,7 +129,7 @@ def test_an_unexpected_error_ends_the_dispatcher(setup):
 
 def test_startup_event_is_a_full_run():
     """The recovery run at start reads the whole board."""
-    assert service.startup_event().scope.full
+    assert service.startup_event().full
 
 
 def test_finish_runs_what_waits_and_names_what_failed(setup):

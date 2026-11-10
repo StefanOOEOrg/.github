@@ -11,6 +11,8 @@ from datetime import UTC, datetime
 import pytest
 
 from loop import events, listener
+from loop.scope import scope_for
+from loop.signals import Subject
 
 SECRET = b"test-secret"
 T0 = datetime(2026, 11, 10, 10, 49, 20, tzinfo=UTC)
@@ -60,12 +62,14 @@ def test_signal_is_the_route_json_and_scopes_like_hermes_cron_event():
     """{event, action, repo, issue, pr, item, sender}; an owner comment is a one-card run."""
     data = payload(action="created", issue={"number": 109},
                    comment={"updated_at": "2026-11-10T10:49:20Z"})
-    event = events.accept("issue_comment", "d1", data, datetime(2027, 1, 1, tzinfo=UTC))
-    assert event.signal == {"event": "issue_comment", "action": "created",
-                            "repo": "StefanOOEOrg/Argus", "issue": "109", "pr": "", "item": "",
-                            "sender": "StefanOOE"}
-    assert event.scope.card == ("StefanOOEOrg/Argus", 109)
-    assert event.at == T0
+    signal = events.accept("issue_comment", "d1", data, datetime(2027, 1, 1, tzinfo=UTC))
+    assert signal.subject == Subject("issue_comment", "created", "StefanOOEOrg/Argus", "109",
+                                     sender="StefanOOE")
+    assert signal.subject.route_json() == {
+        "event": "issue_comment", "action": "created", "repo": "StefanOOEOrg/Argus",
+        "issue": "109", "pr": "", "item": "", "sender": "StefanOOE"}
+    assert scope_for(signal).card == ("StefanOOEOrg/Argus", 109)
+    assert signal.occurred_at == T0 and signal.source == "webhook" and signal.delivery_id == "d1"
 
 
 def test_event_time_falls_back_to_the_receipt():
@@ -79,11 +83,11 @@ def fixture_server():
     queued = []
     seen = set()
 
-    def submit(event):
-        if event.delivery in seen:
+    def submit(signal):
+        if signal.delivery_id in seen:
             return False
-        seen.add(event.delivery)
-        queued.append(event)
+        seen.add(signal.delivery_id)
+        queued.append(signal)
         return True
     server = listener.WebhookServer(("127.0.0.1", 0), SECRET, submit)
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -109,7 +113,7 @@ def test_http_accepts_a_signed_event_at_once(server):
     """202 queued; the engine has not run (the queue holds it)."""
     url, queued = server
     assert post(url, "pull_request_review", payload()) == (202, "queued")
-    assert [e.delivery for e in queued] == ["d1"]
+    assert [e.delivery_id for e in queued] == ["d1"]
 
 
 def test_http_rejects_a_bad_signature(server):

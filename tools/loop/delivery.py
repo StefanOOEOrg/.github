@@ -1,9 +1,9 @@
-"""Delivery of the engine's lines to the Lead, decoupled from the dispatcher.
+"""Delivery of the engine's lines, decoupled from the dispatcher.
 
-The dispatcher only queues a message; one thread hands it to ``LOOP_DELIVER_CMD`` (message on
-stdin, exit 0 means accepted), in order, retrying a failure with backoff. So no engine run ever
-waits for the Lead agent. Messages still open at shutdown go to ``cache/loop-deliver-pending.jsonl``
-and are sent first at the next start.
+The dispatcher only queues a message; one thread hands it to the configured output sink
+(sinks.py, port ``OutputSink``; default ``LOOP_DELIVER_CMD``), in order, retrying a refused
+message with backoff. So no engine run ever waits for the Lead agent. Messages still open at
+shutdown go to ``cache/loop-deliver-pending.jsonl`` and are sent first at the next start.
 """
 
 from __future__ import annotations
@@ -11,8 +11,6 @@ from __future__ import annotations
 import json
 import logging
 import queue
-import shlex
-import subprocess
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -23,25 +21,7 @@ logger = logging.getLogger(__name__)
 
 PENDING = "loop-deliver-pending.jsonl"
 
-Sender = Callable[[str], bool]
-
-
-def command_sender(command: str, timeout: float) -> Sender:
-    """A sender that runs ``command`` (no shell) with the message on stdin."""
-    argv = shlex.split(command)
-
-    def send(text: str) -> bool:
-        try:
-            done = subprocess.run(argv, input=text, text=True, capture_output=True,
-                                  timeout=timeout, check=False)
-        except (OSError, subprocess.TimeoutExpired) as error:
-            logger.warning("delivery command failed: %s", error)
-            return False
-        if done.returncode:
-            logger.warning("delivery command exited %d: %s", done.returncode,
-                           done.stderr.strip()[-300:])
-        return done.returncode == 0
-    return send
+Sender = Callable[[str], bool]  # OutputSink.deliver
 
 
 class Deliverer:
