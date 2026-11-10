@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 from loop import config
 from loop.model import Card, PullRequest
+from loop.rules.status import round_done
 
 
 @dataclass(frozen=True)
@@ -29,11 +30,12 @@ def job_suffix(card: Card) -> str:
 
 def is_stuck(card: Card, jobs: set[str] | None, now: datetime,
              minutes: int = config.STUCK_MINUTES) -> bool:
-    """D2: Action, no linked PR, no scheduled developer job, for ``minutes`` since it got Action.
+    """D2: Action, no scheduled developer job, for ``minutes`` since it got Action, and the round
+    not handed to review: no linked PR, or an open PR without the Lead's review request (#75).
 
     ``jobs`` None means the job list is unknown: then nothing counts as stuck.
     """
-    if jobs is None or not card.state.is_open or card.state.status != "Action" or card.open_prs:
+    if jobs is None or not card.state.is_open or card.state.status != "Action" or round_done(card):
         return False
     if any(name.endswith(job_suffix(card)) for name in jobs):
         return False

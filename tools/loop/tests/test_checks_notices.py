@@ -14,7 +14,7 @@ GITHUB = "StefanOOEOrg/.github"
     (card(1, "Action", changed=ago(20)), set(), True),  # 15 min passed
     (card(1, "Action", changed=ago(10)), set(), False),  # too early
     (card(1, "Action", changed=ago(20)), {"dev-1-repo-a-1"}, False),  # job scheduled
-    (card(1, "Action", changed=ago(20), prs=[pr()]), set(), False),  # a PR exists
+    (card(1, "Action", changed=ago(20), prs=[pr(requested=(LEAD,))]), set(), False),  # in review
     (card(1, "Action", changed=ago(20)), None, False),  # job list unknown
     (card(1, "Goal", changed=ago(20)), set(), False),
 ])

@@ -69,7 +69,8 @@ def parse_card(item: dict, issue: dict) -> Card:
     repo = issue["repository"]
     status = item.get("status") or {}
     ref = Ref(repo["nameWithOwner"], issue["number"], issue.get("url", ""),
-              writable=repo.get("viewerPermission") in WRITE_PERMISSIONS)
+              writable=repo.get("viewerPermission") in WRITE_PERMISSIONS,
+              author=_login(issue.get("author")) or "")
     state = CardState(issue["state"] == "OPEN", status.get("name"), when(status.get("updatedAt")),
                       (item.get("instance") or {}).get("name"), when(issue.get("closedAt")),
                       item.get("id", ""), _reopened(issue))
@@ -94,7 +95,8 @@ def parse_board(pages: list[dict]) -> Board:
     first = pages[0] if pages else {}
     open_prs = tuple(parse_pr(n) for n in (first.get("openPrs") or {}).get("nodes", []) if n)
     merged = tuple(parse_pr(n) for n in (first.get("merged") or {}).get("nodes", []) if n)
-    off_board = tuple(Ref(n["repository"]["nameWithOwner"], n["number"], n.get("url", ""))
+    off_board = tuple(Ref(n["repository"]["nameWithOwner"], n["number"], n.get("url", ""),
+                          author=_login(n.get("author")) or "")
                       for n in (first.get("openIssues") or {}).get("nodes", [])
                       if n and _missing(n))
     return Board(tuple(cards), open_prs, merged, off_board)

@@ -14,7 +14,7 @@ from collections.abc import Callable
 from datetime import date, timedelta
 
 from loop import config
-from loop.model import Board, Card
+from loop.model import Board, Card, Ref
 from loop.parse import parse_board, parse_card
 from loop.queries import BOARD_QUERY, CARD_QUERY
 
@@ -27,8 +27,23 @@ class GitHubError(RuntimeError):
     """A GitHub read failed after all attempts, or answered with errors."""
 
 
+class NotFound(GitHubError):
+    """GitHub cannot resolve the subject (repository or issue gone, renamed or not visible, #66).
+
+    Not retried: the answer is the same on every attempt.
+    """
+
+
 class NotAnIssue(LookupError):
     """The number of a one-card event is a pull request (a comment on a PR)."""
+
+
+class OffProject(LookupError):
+    """The issue of a one-card event is not on the project; ``ref`` carries its author (#84)."""
+
+    def __init__(self, ref: Ref) -> None:
+        super().__init__(f"{ref.repo}#{ref.number} is not on the project")
+        self.ref = ref
 
 
 def run_gh(args: list[str]) -> str:
@@ -40,6 +55,8 @@ def run_gh(args: list[str]) -> str:
                                   timeout=config.GH_TIMEOUT_SECONDS).stdout
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
             last = error
+            if "Could not resolve to" in (getattr(error, "stderr", "") or ""):
+                raise NotFound(error.stderr.strip()[:200]) from error
             logger.warning("gh call failed (attempt %d of %d): %s", attempt + 1, config.GH_ATTEMPTS,
                            (getattr(error, "stderr", "") or str(error)).strip()[:200])
         if attempt < len(config.GH_BACKOFF_SECONDS):
@@ -87,11 +104,13 @@ class GitHubClient:
         """The whole board with the org-wide views (scope of the hourly run)."""
         return parse_board(self.board_pages(today))
 
-    def card(self, repo: str, number: int) -> Card | None:
-        """One card (scope of an event on one issue); None if it is not on the project.
+    def card(self, repo: str, number: int) -> Card:
+        """One card (scope of an event on one issue).
 
         Raises:
             NotAnIssue: the number is a pull request.
+            OffProject: the issue is not on the project.
+            NotFound: GitHub cannot resolve the repository or the number.
         """
         owner, name = repo.split("/", 1)
         data = self._graphql(CARD_QUERY, {"owner": owner, "name": name, "number": number})
@@ -99,7 +118,9 @@ class GitHubClient:
         if issue and issue.get("__typename") == "PullRequest":
             raise NotAnIssue(f"{repo}#{number} is a pull request")
         if not issue:
-            return None
+            raise NotFound(f"{repo}#{number} not found")
         items = [n for n in issue["projectItems"]["nodes"]
                  if n["project"]["number"] == config.PROJECT_NUMBER]
-        return parse_card(items[0], issue) if items else None
+        if not items:
+            raise OffProject(parse_card({}, issue).ref)
+        return parse_card(items[0], issue)
