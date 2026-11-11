@@ -11,7 +11,7 @@ states: [README](../README.md), [PROCESS.md](../PROCESS.md).
 | `loop-deliver.sh` | `python3 -m loop outbox`: prints and empties the listener's outbox. No-agent cron `loop-deliver` of `sw-lead`, `--deliver bot-chat:sw-lead`, fired by the listener per message. |
 | `loop-tick.sh` | Runs the engine once. No-agent cron `loop-tick` of `sw-lead`; before the listener it ran on every event of the Hermes route `loop` (event in `HERMES_CRON_EVENT`) and hourly. Paused since the migration. |
 | `loop-jobwatch.sh` | `python3 -m loop jobwatch`: a full engine run once a developer job has ended (its instance is free, but no GitHub event says so). No-agent cron `loop-jobwatch` of `sw-lead`, every minute; silent and without GitHub calls while no job ended. Also retries a failed run (*A failed run*). |
-| `install.sh` | Copies these files into `profiles/<profile>/scripts/`; Hermes only runs scripts from there, so the cron runs a copy – never edit it. Idempotent. |
+| `install.sh` | Copies these files into `profiles/<profile>/scripts/`; Hermes only runs scripts from there, so the cron runs a copy – never edit it. Idempotent. Copies every `loop/**/*.py` (without `tests/`) by itself; other files are listed in its `FILES`. |
 | `review-pack.py` | `review-pack.py <owner/repo> <pr>`: the review pack for one PR (task, why, CI, earlier findings, round, scope drift, matching lessons). Read-only. |
 | `gen-prozess-diagramm.py`, `gen-beitrag-diagramm.py`, `swimlane_svg.py` | Render the swimlanes in `assets/` (internal and external process). `gen-*.py [out_dir]`. |
 | `gen-tools-diagramme.py`, `readme_svg.py`, `readme_sequence.py` | Render this README's pictures into `docs/diagrams/tools-*-{light,dark}.svg` (style of the architecture picture). `gen-tools-diagramme.py [out_dir]`; `test_readme_diagrams.py` fails when a committed SVG differs from the generator. |
@@ -243,8 +243,7 @@ without a source or an output.
 `submit(Signal(...))` with a unique `delivery_id` (a polling source derives from
 `sources/polling.PollingSource` and implements `poll()`). Sink: a class derived from
 `sinks.BaseSink` with `name` and `deliver(message) -> bool`. Then an entry in `SOURCES` or `SINKS`
-of `wiring.py` (or `wiring.register_source` / `register_sink`), the file in `FILES` of
-`install.sh`, a contract test next to `tests/test_sources.py` or `tests/test_sinks.py`, and the
+of `wiring.py` (or `wiring.register_source` / `register_sink`), a contract test next to `tests/test_sources.py` or `tests/test_sinks.py`, and the
 name in `LOOP_SOURCES` / `LOOP_SINK`. Engine, dispatcher and CLI stay unchanged.
 
 ## Install, test, change
@@ -256,6 +255,12 @@ cd tools && uvx --with pytest pytest -q  # tests (CI: also ruff, pylint, bash -n
 
 `HERMES_PROFILES_ROOT` overrides the profiles root (default `$HERMES_HOME/profiles`, else
 `~/.hermes/profiles`; a `HERMES_HOME` pointing at a profile is refused).
+
+`install.sh` copies every Python module under `loop/` (recursively, without `tests/` and
+`__pycache__`), so a new module needs no entry; the other files (shell scripts, systemd unit,
+generators) stay listed in its `FILES`. An installed `loop/*.py` the source no longer has is
+reported as `stale`, never deleted. `test_install.py` installs into a temporary profile and imports
+every installed module, so CI fails before a merge can break the import on the TC.
 
 After a merge that touches `tools/`: pause `loop-tick` (only while no developer job runs), run
 `install.sh`, check with `python3 -m loop tick --dry-run` in the profile's `scripts/`, resume;
