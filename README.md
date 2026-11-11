@@ -106,6 +106,7 @@ stateDiagram-v2
   Triage --> Goal: product owner
   Goal --> Action: dispatcher starts it
   Action --> Verify: PR linked
+  Verify --> Goal: Lead requests changes (next round)
   Verify --> Done: issue closed
   Done --> Triage: reopened
   Done --> [*]: archived after 14 days
