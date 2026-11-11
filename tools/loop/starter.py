@@ -3,8 +3,9 @@
 The card reaches Action only together with its job: if setting the status or creating the job
 fails, it goes back to Goal (#57). On any failure the caller comments the failed step, hands the
 card to the Lead and the dispatcher skips it until the card changes (D11, ``failed_start``). D9
-(write access of both bots) is checked before, see ``access``. A branch still checked out in the worktree of a busy
-instance is no failure: the card stays on Goal without a comment and starts in a later run.
+(write access of both bots) is checked before, see ``access``. A branch still checked out in the
+worktree of a busy instance is no failure: the card stays on Goal without a comment and starts in
+a later run.
 """
 
 from __future__ import annotations

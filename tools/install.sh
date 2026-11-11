@@ -19,6 +19,7 @@
 # Exit codes: 0 ok, 1 source or target problem, 2 usage.
 set -euo pipefail
 
+# Everything except the loop engine is listed by hand; the engine's modules are collected below.
 FILES=(
   loop-tick.sh
   loop-jobwatch.sh
@@ -29,45 +30,6 @@ FILES=(
   gen-prozess-diagramm.py
   gen-beitrag-diagramm.py
   swimlane_svg.py
-  loop/__init__.py
-  loop/__main__.py
-  loop/access.py
-  loop/apply.py
-  loop/config.py
-  loop/delivery.py
-  loop/dispatcher.py
-  loop/engine.py
-  loop/events.py
-  loop/github_client.py
-  loop/jobwatch.py
-  loop/listener.py
-  loop/model.py
-  loop/outbox.py
-  loop/parse.py
-  loop/ports.py
-  loop/queries.py
-  loop/retry.py
-  loop/rules/__init__.py
-  loop/rules/assignee.py
-  loop/rules/checks.py
-  loop/rules/dispatch.py
-  loop/rules/notices.py
-  loop/rules/status.py
-  loop/scope.py
-  loop/service.py
-  loop/signals.py
-  loop/sinks.py
-  loop/sources/__init__.py
-  loop/sources/github_webhook.py
-  loop/sources/hermes_cron.py
-  loop/sources/jobwatch.py
-  loop/sources/polling.py
-  loop/sources/timer.py
-  loop/starter.py
-  loop/store.py
-  loop/tick.py
-  loop/wiring.py
-  loop/writer.py
 )
 
 profile="sw-lead"
@@ -139,6 +101,20 @@ fi
 src_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 target="$profiles_root/$profile/scripts"
 
+# Every Python module of the loop engine, so a new module cannot be forgotten here (2026-11-11:
+# loop/rules/failed_start.py was missing on the TC after its merge). Tests and caches stay out.
+loop_modules() {
+  (cd "$1" && find loop -type d \( -name tests -o -name __pycache__ \) -prune -o \
+    -type f -name '*.py' -print | LC_ALL=C sort)
+}
+if [[ ! -d "$src_dir/loop" ]]; then
+  echo "install.sh: missing source directory $src_dir/loop" >&2
+  exit 1
+fi
+while IFS= read -r module; do
+  FILES+=("$module")
+done < <(loop_modules "$src_dir")
+
 missing=0
 for file in "${FILES[@]}"; do
   if [[ ! -f "$src_dir/$file" ]]; then
@@ -169,8 +145,9 @@ for file in "${FILES[@]}"; do
     echo "would copy $src -> $dest"
     continue
   fi
-  mode="$(stat -c '%a' "$src")"
-  install -D -m "$mode" "$src" "$dest"
+  mode="$(stat -c '%a' "$src" 2> /dev/null || stat -f '%Lp' "$src")"
+  mkdir -p "$(dirname "$dest")"
+  install -m "$mode" "$src" "$dest"
   echo "copied     $dest"
 done
 
@@ -181,6 +158,16 @@ if [[ "$dry_run" -eq 0 ]]; then
       exit 1
     fi
   done
+fi
+
+# Report, never delete, installed engine modules the source no longer has: an old module that is
+# still imported somewhere would otherwise hide a missing rename.
+if [[ -d "$target/loop" ]]; then
+  while IFS= read -r module; do
+    if [[ ! -f "$src_dir/$module" ]]; then
+      echo "stale      $target/$module (not in the source; remove it by hand if unused)"
+    fi
+  done < <(loop_modules "$target")
 fi
 
 echo "target: $target"
