@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1145 506" width="1145" height="506" role="img" aria-label="Signal sources and sinks: four SignalSource adapters (webhook, timer, jobwatch, hermes-cron) produce a Signal; the core – serial queue, dispatcher, engine, deliverer – knows only the ports; the deliverer hands lines to one of four OutputSink adapters (command, hermes-outbox, stdout, file)">
+<title>Signal sources and output sinks</title>
+<style>
+text{font-family:-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif;fill:#1f2328;text-anchor:middle}
+.kick{font-size:10.5px;font-weight:600;letter-spacing:1.1px}
+.gk{font-size:11px;font-weight:700;letter-spacing:1.4px;text-anchor:start}
+.title{font-size:17px;font-weight:700}
+.sub{font-size:12.5px;fill:#59636e}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px}
+.lbl{font-size:12.5px;fill:#59636e}
+.num{font-weight:700;fill:#1f2328}
+.start{text-anchor:start}.end{text-anchor:end}
+.halo{paint-order:stroke;stroke:#ffffff;stroke-width:3.5px;stroke-linejoin:round}
+.b{fill:#ffffff;stroke-width:1.6}
+.red{stroke:#c8102e}.gh{stroke:#1a7f37}.hm{stroke:#0969da}.ours{stroke:#bc4c00;stroke-width:2.2}.infra{stroke:#6e7781}
+.patch{stroke-dasharray:6 4}
+.k-red{fill:#c8102e}.k-gh{fill:#1a7f37}.k-hm{fill:#0969da}.k-ours{fill:#bc4c00}.k-infra{fill:#6e7781}
+.frame{stroke-width:1.2}
+.f-gh{fill:#1a7f37;fill-opacity:0.05;stroke:#1a7f37}
+.f-hm{fill:#0969da;fill-opacity:0.05;stroke:#0969da}
+.f-ours{fill:#bc4c00;fill-opacity:0.05;stroke:#bc4c00}
+.f-infra{fill:#6e7781;fill-opacity:0.05;stroke:#6e7781}
+.note{fill:#f6f8fa;stroke:#d0d7de;stroke-width:1.2}
+path{fill:none;stroke-width:1.8}.a{stroke:#6e7781}.r{stroke:#c8102e;stroke-width:2.2}
+.d{stroke-dasharray:6 5}.life{stroke:#d0d7de;stroke-width:1.5;stroke-dasharray:4 4}
+</style>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#6e7781;stroke:none"/></marker><marker id="mr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#c8102e;stroke:none"/></marker></defs>
+<rect class="frame f-ours" x="20" y="20" width="270" height="466" rx="16"/>
+<text class="gk k-ours" x="36" y="44">SIGNALSOURCE · LOOP_SOURCES</text>
+<rect class="frame f-ours" x="535" y="20" width="270" height="466" rx="16"/>
+<text class="gk k-ours" x="551" y="44">CORE · KNOWS ONLY THE PORTS</text>
+<rect class="frame f-ours" x="855" y="20" width="270" height="466" rx="16"/>
+<text class="gk k-ours" x="871" y="44">OUTPUTSINK · LOOP_SINK</text>
+<rect class="b ours" x="40" y="64" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="155.0" y="85.0">WEBHOOK</text>
+<text class="title" x="155.0" y="107.0">GitHubWebhookSource</text>
+<text class="sub" x="155.0" y="126.0">HMAC · route filter</text>
+<rect class="b ours" x="555" y="64" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="670.0" y="85.0">QUEUE</text>
+<text class="title" x="670.0" y="107.0">Serial queue</text>
+<text class="sub" x="670.0" y="126.0">dedupe · event time</text>
+<rect class="b ours" x="875" y="64" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="990.0" y="85.0">COMMAND</text>
+<text class="title" x="990.0" y="107.0">CommandSink</text>
+<text class="sub" x="990.0" y="126.0"><tspan class="mono">LOOP_DELIVER_CMD</tspan></text>
+<path class="a" d="M270,106 H315"/>
+<path class="a" d="M830,106 H871" marker-end="url(#ma)"/>
+<rect class="b ours" x="40" y="168" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="155.0" y="189.0">TIMER</text>
+<text class="title" x="155.0" y="211.0">TimerSource</text>
+<text class="sub" x="155.0" y="230.0"><tspan class="mono">LOOP_FULL_RUN_MINUTES</tspan></text>
+<rect class="b ours" x="555" y="168" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="670.0" y="189.0">DISPATCHER</text>
+<text class="title" x="670.0" y="211.0">Dispatcher</text>
+<text class="sub" x="670.0" y="230.0">one run · merge · retry</text>
+<rect class="b ours" x="875" y="168" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="990.0" y="189.0">HERMES-OUTBOX</text>
+<text class="title" x="990.0" y="211.0">HermesBotChatSink</text>
+<text class="sub" x="990.0" y="230.0">outbox + loop-deliver</text>
+<path class="a" d="M270,210 H315"/>
+<path class="a" d="M830,210 H871" marker-end="url(#ma)"/>
+<rect class="b ours" x="40" y="272" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="155.0" y="293.0">JOBWATCH</text>
+<text class="title" x="155.0" y="315.0">JobWatchSource</text>
+<text class="sub" x="155.0" y="334.0">a dev job ended</text>
+<rect class="b ours" x="555" y="272" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="670.0" y="293.0">ENGINE</text>
+<text class="title" x="670.0" y="315.0">Loop engine</text>
+<text class="sub" x="670.0" y="334.0"><tspan class="mono">scope_for</tspan> → <tspan class="mono">run_scope</tspan></text>
+<rect class="b ours" x="875" y="272" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="990.0" y="293.0">STDOUT</text>
+<text class="title" x="990.0" y="315.0">StdoutSink</text>
+<text class="sub" x="990.0" y="334.0">Hermes cron output</text>
+<path class="a" d="M270,314 H315"/>
+<path class="a" d="M830,314 H871" marker-end="url(#ma)"/>
+<rect class="b ours" x="40" y="376" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="155.0" y="397.0">HERMES-CRON</text>
+<text class="title" x="155.0" y="419.0">HermesCronSource</text>
+<text class="sub" x="155.0" y="438.0"><tspan class="mono">HERMES_CRON_EVENT</tspan></text>
+<rect class="b ours" x="555" y="376" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="670.0" y="397.0">DELIVERER</text>
+<text class="title" x="670.0" y="419.0">Deliverer</text>
+<text class="sub" x="670.0" y="438.0">own thread · retry · pending</text>
+<rect class="b ours" x="875" y="376" width="230" height="84" rx="12"/>
+<text class="kick k-ours" x="990.0" y="397.0">FILE</text>
+<text class="title" x="990.0" y="419.0">FileSink</text>
+<text class="sub" x="990.0" y="438.0"><tspan class="mono">LOOP_FILE_SINK</tspan></text>
+<path class="a" d="M270,418 H315"/>
+<path class="a" d="M830,418 H871" marker-end="url(#ma)"/>
+<rect class="b infra" x="335" y="56" width="180" height="116" rx="12"/>
+<text class="kick k-infra" x="425.0" y="77.0">MODEL</text>
+<text class="title" x="425.0" y="99.0">Signal</text>
+<text class="sub" x="425.0" y="118.0">source · <tspan class="mono">delivery_id</tspan></text>
+<text class="sub" x="425.0" y="134.0"><tspan class="mono">occurred_at</tspan></text>
+<text class="sub" x="425.0" y="150.0">subject or full run</text>
+<path class="a" d="M315,418 V106 H331" marker-end="url(#ma)"/>
+<path class="a" d="M515,106 H551" marker-end="url(#ma)"/>
+<path class="a" d="M670,148 V164" marker-end="url(#ma)"/>
+<path class="a" d="M670,252 V268" marker-end="url(#ma)"/>
+<path class="a" d="M670,356 V372" marker-end="url(#ma)"/>
+<path class="a" d="M785,418 H830 V106"/>
+</svg>
