@@ -58,4 +58,4 @@ def test_comment_on_a_pull_request_changes_nothing():
     client = GitHubClient(answer({"__typename": "PullRequest"}))
     out = tick.decide_scope(client, Scope(("O/r", 88), "issue_comment.created"),
                             datetime(2026, 11, 8, tzinfo=UTC))
-    assert not out.starts and not out.board.status and not out.board.add
+    assert not out.dispatch.starts and not out.board.status and not out.board.add

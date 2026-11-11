@@ -113,6 +113,7 @@ Assignee = whoever acts next, on the card **and** on its PR (the loop engine syn
 | Goal, blocked | Whoever acts next on the blocker; the product owner if the blocker is not on the board |
 | Goal, not refined | Lead (refines it, then it starts by itself) |
 | Goal / Action | Developer |
+| Goal after a failed start, until the card changes | Lead (clears the cause, e.g. a worktree holding the branch) |
 | Action without developer job for 15 min, and no PR or no review request on it (dispatcher hands it over) | product owner |
 | PR open, review requested from the Lead | Lead |
 | Lead requested changes | Developer; after the third round the product owner |
@@ -150,7 +151,7 @@ stateDiagram-v2
 
 </details>
 
-**Goal → Action** needs a free instance, no overlap of *Allowed files* with a running card, no open blocker, a task order (Branch and Allowed files), not a Feature, and write access for both bots; the first startable card in Goal order starts. From round 2 a card returns to the instance it had (its branch is checked out there) and waits while that instance is busy.
+**Goal → Action** needs a free instance, no overlap of *Allowed files* with a running card, no open blocker, a task order (Branch and Allowed files), not a Feature, and write access for both bots; the first startable card in Goal order starts. A card whose start failed is skipped until it changes, and in the same run the next startable card takes the instance. From round 2 a card returns to the instance it had (its branch is checked out there) and waits while that instance is busy.
 
 The loop engine sets these transitions; all built-in project workflows are switched off:
 
@@ -176,7 +177,7 @@ The loop engine sets these transitions; all built-in project workflows are switc
 5. **Action** – The dispatcher starts the first startable Goal card (see *Goal → Action*) per free instance in a dedicated worktree, setting instance, Developer and **Action**.
    - Pulled before it was refined → the Lead refines it in place; if a linked PR is already merged, the Lead gets a question (close or clarify) instead.
    - Open blocker → stays on Goal with a comment giving the reason; the assignee moves to whoever acts next on the blocker. Overlapping files wait their turn. A bot without write access → one comment.
-   - A card reaches Action only together with its developer job; a failed start puts it back on Goal with a comment. Stalled on Action (no developer job for 15 minutes, and no PR or one that never requested the Lead's review) → reported, handed to the product owner, instance freed; back on Goal it starts again.
+   - A card reaches Action only together with its developer job; a failed start puts it back on Goal with one comment naming the failed step and its cause (e.g. the path of a worktree outside the engine's that holds the branch) and hands it to the Lead. The dispatcher skips it until the card changes – a new comment, an edit, a status change, or an assignment other than the engine's own of the Lead – and tries again; meanwhile the next Goal card starts. Stalled on Action (no developer job for 15 minutes, and no PR or one that never requested the Lead's review) → reported, handed to the product owner, instance freed; back on Goal it starts again.
    - The developer works test-first, commits, pushes, opens the PR with `Closes #<task>` and requests the Lead's review → **Verify**.
 6. **Verify (Lead)** – Starts from the generated pack in a **fresh checker session** (*Review context*): quality gates (CI, coverage, lint), mutation probes against "false green" tests, a formal GitHub review posted from the checker's verdict. *Request changes* starts the next round via **Goal** (engine, see transitions) – the Lead neither moves the card nor creates a developer job; after the third round the task goes to the product owner with the open findings. On the Lead's approval of the current head the engine requests the product owner's review.
 7. **Human gate and merge** – The product owner approves (reminder: *Notifications*); the Lead merges. The task closes and moves to **Done**; merged predecessors unblock the next tasks. The process runs at L2: a human gate on every merge.

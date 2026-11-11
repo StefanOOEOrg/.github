@@ -102,11 +102,12 @@ class CardState:
 
 @dataclass(frozen=True)
 class Task:
-    """The issue as a work order."""
+    """The issue as a work order: its text, type and sub-issues."""
 
     body: str = ""
     issue_type: str | None = None
     sub_issues: int = 0
+    last_comment: str = ""  # text of the latest comment (Activity has who and when)
 
     @property
     def is_feature(self) -> bool:

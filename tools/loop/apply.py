@@ -13,7 +13,9 @@ from loop.engine import Decisions
 from loop.github_client import GitHubError
 from loop.model import Card
 from loop.rules.assignee import round_limit_pr
-from loop.starter import WAITING, start
+from loop.rules.dispatch import Dispatch
+from loop.rules.failed_start import failed_start_text
+from loop.starter import Failure, start
 from loop.store import Store
 from loop.writer import GitHubWriter
 
@@ -74,7 +76,7 @@ def _stuck_text(card: Card) -> str:
 
 
 def _comments(out: Decisions, writer: GitHubWriter, store: Store, now: datetime) -> None:
-    for card, reason in out.blocked:
+    for card, reason in out.dispatch.blocked:
         if store.first_comment(f"{card.ref.url}|{reason}", now):
             _safely("comment", writer.comment, card.ref,
                     f"Not started: {reason}. It stays on Goal and starts as soon as this is "
@@ -90,22 +92,43 @@ def _comments(out: Decisions, writer: GitHubWriter, store: Store, now: datetime)
             _safely("reminder", writer.comment, pr.ref, reminder.text)
 
 
-def _starts(out: Decisions, writer: GitHubWriter, store: Store, now: datetime) -> list[str]:
-    lines = []
-    for planned in out.starts:
+def _failed(card: Card, failure: Failure, writer: GitHubWriter) -> str:
+    """D11: comment the cause with the skip marker, hand the card to the Lead, tell the Lead."""
+    _safely("comment", writer.comment, card.ref, failed_start_text(failure.step, failure.detail))
+    remove = (set(card.assignees) | {config.DEV}) - {config.LEAD}
+    _safely("assignees", writer.assignees, card, {config.LEAD}, remove)
+    cause = f"{failure.step}: {failure.detail}" if failure.detail else failure.step
+    return (f"Start fehlgeschlagen: {card.ref.repo}#{card.ref.number} ({cause}). Bleibt auf Goal "
+            f"beim Lead und wird übersprungen, bis sich die Karte ändert: {card.ref.url}")
+
+
+def _starts(run: Dispatch, writer: GitHubWriter, now: datetime) -> tuple[list[str], list[str]]:
+    """Run the planned starts; a card that fails or waits frees its instance for the next one.
+
+    Returns (lines for the Lead, lines for the local log).
+    """
+    lead, log = [], []
+    tried: set[tuple[str, int]] = set()
+    plan = list(run.starts)
+    while plan:
+        planned = plan.pop(0)
         card = planned.card
-        failed = start(card, planned.instance, writer, planned.busy)
-        if failed == WAITING:
-            continue  # its branch is still in use by a busy instance: no comment, next run
-        if failed:
-            reason = f"the start failed while {failed}, see the engine log"
-            if store.first_comment(f"{card.ref.url}|{reason}", now):
-                _safely("comment", writer.comment, card.ref, f"Not started: {reason}.")
+        if card.key in tried:
+            continue  # started before a replan: the replan keeps the order before a failure
+        tried.add(card.key)
+        result = start(card, planned.instance, writer, planned.busy)
+        if result is None:
+            run.started.append(planned)
+            moved = card.state.changed
+            seconds = f", Goal→Action {round((now - moved).total_seconds())} s" if moved else ""
+            log.append(f"{planned.instance}: gestartet {card.ref.repo}#{card.ref.number}{seconds}")
             continue
-        moved = card.state.changed
-        seconds = f", Goal→Action {round((now - moved).total_seconds())} s" if moved else ""
-        lines.append(f"{planned.instance}: gestartet {card.ref.repo}#{card.ref.number}{seconds}")
-    return lines
+        if isinstance(result, Failure):  # WAITING: its branch is still in use, no comment
+            run.failed.append(planned)
+            lead.append(_failed(card, result, writer))
+        if run.replan:
+            plan = run.replan(frozenset(tried - {s.card.key for s in run.started}))
+    return lead, log
 
 
 def apply(out: Decisions, writer: GitHubWriter, store: Store, now: datetime,
@@ -113,8 +136,8 @@ def apply(out: Decisions, writer: GitHubWriter, store: Store, now: datetime,
     """Execute the decisions; return (lines for the Lead, lines for the local log)."""
     added = _board(out, writer, store, now)
     _comments(out, writer, store, now)
-    log = _starts(out, writer, store, now)
-    lines = added + store.due_notices(out.notices, now, full)
+    failed, log = _starts(out.dispatch, writer, now)
+    lines = added + failed + store.due_notices(out.notices, now, full)
     for ref in out.board.add:  # its "Neu im Project" line went out now: not again next run
         store.notices.setdefault(f"triage-new:{ref.url}", now.isoformat())
     return lines, log

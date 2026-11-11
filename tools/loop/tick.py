@@ -87,8 +87,8 @@ def decide_scope(client: GitHubClient, scope: Scope, now: datetime) -> Decisions
 def summary(scope: Scope, out: Decisions, printed: int) -> str:
     """The one line per run that is scanned: it never hides a write (#72)."""
     return (f"run {scope.reason}: {len(out.board.status)} status, {len(out.board.assignee)} "
-            f"assignee, {len(out.board.close)} close(s), {len(out.starts)} start(s), "
-            f"{printed} notice(s) printed")
+            f"assignee, {len(out.board.close)} close(s), {len(out.dispatch.started)} start(s), "
+            f"{len(out.dispatch.failed)} failed start(s), {printed} notice(s) printed")
 
 
 def run_scope(scope: Scope, dry_run: bool = False) -> list[str]:

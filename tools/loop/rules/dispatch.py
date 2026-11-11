@@ -14,6 +14,7 @@ from datetime import datetime
 from loop import config
 from loop.model import Board, Card
 from loop.rules.checks import is_stuck
+from loop.rules.failed_start import start_failed
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,10 @@ class Dispatch:
     starts: list[Start] = field(default_factory=list)
     blocked: list[tuple[Card, str]] = field(default_factory=list)  # (card, reason): comment once
     waiting: list[Card] = field(default_factory=list)  # overlap or no free instance: silent
+    # the starts again without the given cards: a failed start frees its instance in the same run
+    replan: Callable[[frozenset[tuple[str, int]]], list[Start]] | None = None
+    started: list[Start] = field(default_factory=list)  # filled by apply: the starts that worked
+    failed: list[Start] = field(default_factory=list)  # filled by apply: the starts that failed
 
 
 def overlaps(first: Iterable[str], second: Iterable[str]) -> bool:
@@ -74,7 +79,8 @@ def held_by_owner(card: Card) -> bool:
 
 
 def dispatch(board: Board, jobs: set[str] | None, now: datetime,
-             access: Callable[[str], str | None]) -> Dispatch:
+             access: Callable[[str], str | None],
+             skip: frozenset[tuple[str, int]] = frozenset()) -> Dispatch:
     """Decide the starts of this run.
 
     Args:
@@ -82,6 +88,7 @@ def dispatch(board: Board, jobs: set[str] | None, now: datetime,
         jobs: Names of the scheduled developer jobs, None if unknown (then nothing is stuck).
         now: The time of the run.
         access: Repo -> None if both bots can write, else the reason (D9).
+        skip: Cards whose start failed or waits in this run: the next card takes the instance.
 
     Returns:
         Starts, blocked cards with their reason, and silently waiting cards.
@@ -93,8 +100,8 @@ def dispatch(board: Board, jobs: set[str] | None, now: datetime,
     running = [(c.ref.repo, c.task.allowed_files) for c in active]
     result = Dispatch()
     for card in (c for c in board.cards if c.state.is_open and c.state.status == "Goal"):  # D3
-        if held_by_owner(card):
-            continue
+        if held_by_owner(card) or start_failed(card) or card.key in skip:
+            continue  # D5; D11: a failed start waits with the Lead until the card changes
         reason = why_not(card, access)
         if reason:
             result.blocked.append((card, reason))
