@@ -14,6 +14,7 @@ architecture and the card states are in the [README](../README.md) and [PROCESS.
 | `install.sh` | Copies these files into `profiles/<profile>/scripts/`. Hermes only runs scripts from there, so the cron runs a copy: never edit it. Idempotent. |
 | `review-pack.py` | `review-pack.py <owner/repo> <pr>`: the review pack for one PR (task, why, CI, earlier findings, round, scope drift, matching lessons). Read-only. |
 | `gen-prozess-diagramm.py`, `gen-beitrag-diagramm.py`, `swimlane_svg.py` | Render the swimlanes in `assets/` (internal and external process). `gen-*.py [out_dir]`. |
+| `gen-tools-diagramme.py`, `readme_svg.py`, `readme_sequence.py` | Render the pictures of this README into `docs/diagrams/tools-*-{light,dark}.svg`, in the style of the architecture picture. `gen-tools-diagramme.py [out_dir]`; `test_readme_diagrams.py` fails when a committed SVG differs from the generator. |
 | `ruff.toml` | Lint configuration. |
 
 The old scripts `github-watch.sh`, `dev-dispatch.sh` and `assignee_sync.py`, replaced by the
@@ -23,57 +24,18 @@ engine, are in the git history up to commit `18f3b46`.
 
 One run of `python3 -m loop tick` (green GitHub, blue Hermes, orange our code):
 
-```mermaid
-flowchart TB
-  hook["Webhook trigger<br/>with HERMES_CRON_EVENT"]:::hermes
-  hourly["Hourly run<br/>no event"]:::hermes
-  subgraph PKG["Package tools/loop · one lock per run"]
-    scope["1 · Scope<br/>event → one card or the whole board<br/>scope.py"]:::ours
-    read["2 · Read<br/>one GraphQL query per scope<br/>github_client.py → model.py"]:::ours
-    decide["3 · Decide<br/>pure rules: status, assignee, dispatch,<br/>notices, checks · rules/, engine.py"]:::ours
-    diff["4 · Diff<br/>desired vs. actual, only differences"]:::ours
-    act["5 · Execute<br/>status, assignee, comments, starts, add to board<br/>apply.py, writer.py, starter.py"]:::ours
-    notify["6 · Notify<br/>Lead lines on stdout<br/>“already reported”: cache/loop-state.json"]:::ours
-  end
-  gh["GitHub<br/>single source of truth"]:::gh
-  lead["Lead agent<br/>via Hermes delivery"]:::hermes
-  hook --> scope
-  hourly --> scope
-  scope --> read --> decide --> diff --> act --> notify
-  read -. reads .-> gh
-  act -. writes .-> gh
-  notify --> lead
-  classDef gh fill:#e6f4ea,stroke:#2e7d32,color:#1b1b1b
-  classDef hermes fill:#e3f0fb,stroke:#1565c0,color:#1b1b1b
-  classDef ours fill:#fff1e0,stroke:#ef6c00,color:#1b1b1b
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../docs/diagrams/tools-engine-run-dark.svg">
+  <img alt="One run of the loop engine: a Hermes webhook trigger or the hourly run starts it; inside tools/loop, under one lock, it scopes, reads GitHub, decides, diffs, executes the differences on GitHub and notifies the Lead through Hermes" src="../docs/diagrams/tools-engine-run-light.svg">
+</picture>
 
-The Hermes side, with the names from the Hermes code; dashed boxes are the local patch in
+The Hermes side, with the names from the Hermes code; dashed cards are the local patch in
 `hermes-config/patches` (async Bot Chat delivery, coalesce, event context for script jobs):
 
-```mermaid
-flowchart TB
-  gh["GitHub org webhook"]:::gh
-  subgraph GW["Hermes gateway · names from the code · dashed = local patch"]
-    hw["WebhookAdapter._handle_webhook<br/>HMAC signature, idempotency cache"]:::hermes
-    flt["Route payload filters<br/>webhook_subscriptions.json"]:::hermes
-    hct["_handle_cron_trigger<br/>+ cron_job_on_busy: coalesce"]:::patch
-    ex["execute_job_for_event →<br/>claim_job_for_fire"]:::hermes
-    ext["_launch_external_cron_worker<br/>+ carries the event context"]:::patch
-    rj["run_job → _run_no_agent_job<br/>+ HERMES_CRON_EVENT for the script"]:::patch
-    dbc["_deliver_to_bot_chat<br/>+ defer to cron/bot_chat_pending"]:::patch
-    dqw["DeliveryQueueWatch<br/>+ also watches bot_chat_pending, 1 s"]:::patch
-    dr["drain_in_background → _drain"]:::hermes
-  end
-  tick["loop-tick.sh → loop engine"]:::ours
-  lead["Lead turn in Bot Chat"]:::hermes
-  gh --> hw --> flt --> hct --> ex --> ext --> rj --> tick
-  tick -- "stdout" --> dbc --> dqw --> dr --> lead
-  classDef gh fill:#e6f4ea,stroke:#2e7d32,color:#1b1b1b
-  classDef hermes fill:#e3f0fb,stroke:#1565c0,color:#1b1b1b
-  classDef ours fill:#fff1e0,stroke:#ef6c00,color:#1b1b1b
-  classDef patch fill:#e3f0fb,stroke:#1565c0,stroke-width:2px,stroke-dasharray:6 4,color:#1b1b1b
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../docs/diagrams/tools-hermes-side-dark.svg">
+  <img alt="The Hermes side: the GitHub org webhook passes the gateway's webhook adapter, route filters, cron trigger, job claim, external worker and no-agent job into loop-tick.sh; its stdout goes through the Bot Chat delivery, the queue watch and the drain to a Lead turn; dashed cards are the local patch" src="../docs/diagrams/tools-hermes-side-light.svg">
+</picture>
 
 ### A failed run
 
@@ -95,25 +57,10 @@ Since 2026-11-10 the org webhook no longer goes through Hermes: a trigger of the
 could get lost while the cron `loop-tick` was busy (LESSONS.md). `python3 -m loop listen`, the
 systemd service `loop-listener`, takes its place; no polling of GitHub.
 
-```mermaid
-flowchart LR
-  gh["GitHub org webhook"]:::gh --> funnel["Tailscale Funnel"]:::infra
-  subgraph L["loop-listener · one process"]
-    http["HTTP thread<br/>HMAC · route filter · dedupe<br/>202 at once"]:::ours
-    q[("in-memory queue<br/>by event time")]:::ours
-    disp["Dispatcher<br/>one engine run at a time<br/>tick.run_scope, in-process"]:::ours
-    dq[("delivery queue")]:::ours
-    dl["Delivery thread<br/>LOOP_DELIVER_CMD"]:::ours
-    clk["Start + clock<br/>full run"]:::ours
-  end
-  funnel --> http --> q --> disp --> dq --> dl
-  clk --> q
-  dl -- "outbox + hermes cron run" --> deliver["Cron loop-deliver<br/>--deliver bot-chat:sw-lead"]:::hermes --> lead["Lead"]:::hermes
-  classDef gh fill:#e6f4ea,stroke:#2e7d32,color:#1b1b1b
-  classDef hermes fill:#e3f0fb,stroke:#1565c0,color:#1b1b1b
-  classDef ours fill:#fff1e0,stroke:#ef6c00,color:#1b1b1b
-  classDef infra fill:#f2f2f2,stroke:#757575,color:#1b1b1b
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../docs/diagrams/tools-listener-dark.svg">
+  <img alt="The webhook listener: the GitHub org webhook reaches it through Tailscale Funnel; the HTTP thread checks and queues, the start and the clock add full runs, the dispatcher runs the engine one run at a time, the delivery thread hands each message to the Hermes cron loop-deliver, which delivers it to the Lead" src="../docs/diagrams/tools-listener-light.svg">
+</picture>
 
 **Receive** (`sources/github_webhook.py`, `listener.py`, `events.py`). POST with `X-Hub-Signature-256` = HMAC-SHA256 of the body
 under the secret (`LOOP_WEBHOOK_SECRET_FILE`), else 401. The filter of the former route: org
@@ -210,31 +157,10 @@ them, and one composition root (`loop/wiring.py`) picks the adapters by configur
 configuration change everything runs as before: `listen` with the webhook and the clock into
 `LOOP_DELIVER_CMD`, `tick` and `jobwatch` with `HERMES_CRON_EVENT` onto stdout.
 
-```mermaid
-flowchart LR
-  subgraph S["SignalSource adapters · LOOP_SOURCES"]
-    wh["GitHubWebhookSource<br/>webhook: HMAC · filter"]:::ours
-    tm["TimerSource<br/>timer: LOOP_FULL_RUN_MINUTES"]:::ours
-    jw["JobWatchSource<br/>jobwatch: dev job ended"]:::ours
-    hc["HermesCronSource<br/>hermes-cron: HERMES_CRON_EVENT"]:::ours
-  end
-  sig(["Signal<br/>source · delivery_id · occurred_at<br/>subject or full run"]):::model
-  subgraph C["Core · knows only the ports"]
-    q[("serial queue<br/>dedupe · event time")]:::ours
-    disp["Dispatcher<br/>one run at a time · merge · retry"]:::ours
-    eng["Engine<br/>scope_for → run_scope"]:::ours
-    dq[("Deliverer<br/>own thread · retry · pending file")]:::ours
-  end
-  subgraph K["OutputSink adapters · LOOP_SINK / LOOP_TICK_SINK"]
-    cmd["CommandSink<br/>command: LOOP_DELIVER_CMD"]:::ours
-    hb["HermesBotChatSink<br/>hermes-outbox: outbox + loop-deliver"]:::ours
-    so["StdoutSink<br/>stdout: Hermes cron output"]:::ours
-    fs["FileSink<br/>file: LOOP_FILE_SINK"]:::ours
-  end
-  wh & tm & jw & hc --> sig --> q --> disp --> eng --> dq --> cmd & hb & so & fs
-  classDef ours fill:#fff1e0,stroke:#ef6c00,color:#1b1b1b
-  classDef model fill:#f2f2f2,stroke:#757575,color:#1b1b1b
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../docs/diagrams/tools-ports-dark.svg">
+  <img alt="Signal sources and sinks: four SignalSource adapters (webhook, timer, jobwatch, hermes-cron) produce a Signal; the core – serial queue, dispatcher, engine, deliverer – knows only the ports; the deliverer hands lines to one of four OutputSink adapters (command, hermes-outbox, stdout, file)" src="../docs/diagrams/tools-ports-light.svg">
+</picture>
 
 **The signal** (`loop/signals.py`). `Signal(source, delivery_id, occurred_at, subject)`; the
 `Subject(kind, action, repo, issue, pr, item, sender)` is the change GitHub reported (the former
@@ -286,34 +212,10 @@ without a source or an output.
 
 **A webhook event, end to end, with a failed run:**
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant GH as GitHub
-  participant WS as GitHubWebhookSource
-  participant D as Dispatcher (queue)
-  participant E as Engine
-  participant DL as Deliverer
-  participant K as OutputSink
-  GH->>WS: POST delivery (X-Hub-Signature-256)
-  WS->>WS: HMAC · route filter → Signal
-  WS->>D: submit(signal)
-  D-->>WS: True (False: duplicate)
-  WS-->>GH: 202 queued
-  D->>E: run(scope_for(signal))
-  E--xD: GitHubError
-  Note over D: signals back into the queue,<br/>backoff 5 s, doubled up to 300 s
-  GH->>WS: another delivery
-  WS->>D: submit(signal 2)
-  D->>E: one full run over both
-  E-->>D: lines
-  D->>DL: put(message)
-  DL->>K: deliver(message)
-  K-->>DL: False (refused)
-  Note over DL: retry with backoff, order kept
-  DL->>K: deliver(message)
-  K-->>DL: True
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../docs/diagrams/tools-webhook-retry-dark.svg">
+  <img alt="Sequence of a webhook event: GitHub posts a delivery, the webhook source checks it and submits a Signal, answered 202; the dispatcher's engine run fails with GitHubError, the signals go back with backoff; a second delivery arrives and one full run covers both; the deliverer hands the message to the output sink, which refuses once and accepts on the retry" src="../docs/diagrams/tools-webhook-retry-light.svg">
+</picture>
 
 **A new adapter.** A source: a class with `name`, `start(submit)` and `stop()` that calls
 `submit(Signal(...))` with a unique `delivery_id` (a polling source derives from

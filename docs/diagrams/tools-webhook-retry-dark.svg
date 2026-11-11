@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1141 978" width="1141" height="978" role="img" aria-label="Sequence of a webhook event: GitHub posts a delivery, the webhook source checks it and submits a Signal, answered 202; the dispatcher's engine run fails with GitHubError, the signals go back with backoff; a second delivery arrives and one full run covers both; the deliverer hands the message to the output sink, which refuses once and accepts on the retry">
+<title>A webhook event, end to end, with a failed run</title>
+<style>
+text{font-family:-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif;fill:#e6edf3;text-anchor:middle}
+.kick{font-size:10.5px;font-weight:600;letter-spacing:1.1px}
+.gk{font-size:11px;font-weight:700;letter-spacing:1.4px;text-anchor:start}
+.title{font-size:17px;font-weight:700}
+.sub{font-size:12.5px;fill:#9198a1}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px}
+.lbl{font-size:12.5px;fill:#9198a1}
+.num{font-weight:700;fill:#e6edf3}
+.start{text-anchor:start}.end{text-anchor:end}
+.halo{paint-order:stroke;stroke:#0d1117;stroke-width:3.5px;stroke-linejoin:round}
+.b{fill:#161b22;stroke-width:1.6}
+.red{stroke:#f0596b}.gh{stroke:#3fb950}.hm{stroke:#58a6ff}.ours{stroke:#f0883e;stroke-width:2.2}.infra{stroke:#9198a1}
+.patch{stroke-dasharray:6 4}
+.k-red{fill:#f0596b}.k-gh{fill:#3fb950}.k-hm{fill:#58a6ff}.k-ours{fill:#f0883e}.k-infra{fill:#9198a1}
+.frame{stroke-width:1.2}
+.f-gh{fill:#3fb950;fill-opacity:0.08;stroke:#3fb950}
+.f-hm{fill:#58a6ff;fill-opacity:0.08;stroke:#58a6ff}
+.f-ours{fill:#f0883e;fill-opacity:0.08;stroke:#f0883e}
+.f-infra{fill:#9198a1;fill-opacity:0.08;stroke:#9198a1}
+.note{fill:#21262d;stroke:#3d444d;stroke-width:1.2}
+path{fill:none;stroke-width:1.8}.a{stroke:#9198a1}.r{stroke:#f0596b;stroke-width:2.2}
+.d{stroke-dasharray:6 5}.life{stroke:#3d444d;stroke-width:1.5;stroke-dasharray:4 4}
+</style>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#9198a1;stroke:none"/></marker><marker id="mr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#f0596b;stroke:none"/></marker></defs>
+<path class="life" d="M108,104 V968"/>
+<rect class="b gh" x="20" y="20" width="176" height="84" rx="12"/>
+<text class="kick k-gh" x="108.0" y="41.0">GITHUB</text>
+<text class="title" x="108.0" y="63.0">GitHub</text>
+<text class="sub" x="108.0" y="82.0">org webhook</text>
+<path class="life" d="M293,104 V968"/>
+<rect class="b ours" x="205" y="20" width="176" height="84" rx="12"/>
+<text class="kick k-ours" x="293.0" y="41.0">SIGNAL SOURCE</text>
+<text class="title" x="293.0" y="63.0">Webhook source</text>
+<text class="sub" x="293.0" y="82.0"><tspan class="mono">GitHubWebhookSource</tspan></text>
+<path class="life" d="M478,104 V968"/>
+<rect class="b ours" x="390" y="20" width="176" height="84" rx="12"/>
+<text class="kick k-ours" x="478.0" y="41.0">CORE</text>
+<text class="title" x="478.0" y="63.0">Dispatcher</text>
+<text class="sub" x="478.0" y="82.0">with the queue</text>
+<path class="life" d="M663,104 V968"/>
+<rect class="b ours" x="575" y="20" width="176" height="84" rx="12"/>
+<text class="kick k-ours" x="663.0" y="41.0">CORE</text>
+<text class="title" x="663.0" y="63.0">Engine</text>
+<text class="sub" x="663.0" y="82.0"><tspan class="mono">run_scope</tspan></text>
+<path class="life" d="M848,104 V968"/>
+<rect class="b ours" x="760" y="20" width="176" height="84" rx="12"/>
+<text class="kick k-ours" x="848.0" y="41.0">CORE</text>
+<text class="title" x="848.0" y="63.0">Deliverer</text>
+<text class="sub" x="848.0" y="82.0">own thread</text>
+<path class="life" d="M1033,104 V968"/>
+<rect class="b ours" x="945" y="20" width="176" height="84" rx="12"/>
+<text class="kick k-ours" x="1033.0" y="41.0">OUTPUT SINK</text>
+<text class="title" x="1033.0" y="63.0">Output sink</text>
+<text class="sub" x="1033.0" y="82.0"><tspan class="mono">LOOP_SINK</tspan></text>
+<path class="a" d="M108,156 H289" marker-end="url(#ma)"/>
+<text class="lbl halo" x="200.5" y="148"><tspan class="num">1</tspan>  POST delivery <tspan class="mono">(X-Hub-Signature-256)</tspan></text>
+<path class="a" d="M293,196 H337 V216 H298" marker-end="url(#ma)"/>
+<text class="lbl start halo" x="347" y="210"><tspan class="num">2</tspan>  HMAC · route filter → Signal</text>
+<path class="a" d="M293,250 H474" marker-end="url(#ma)"/>
+<text class="lbl halo" x="385.5" y="242"><tspan class="num">3</tspan>  <tspan class="mono">submit(signal)</tspan></text>
+<path class="a d" d="M478,290 H297" marker-end="url(#ma)"/>
+<text class="lbl halo" x="385.5" y="282"><tspan class="num">4</tspan>  <tspan class="mono">True</tspan> (<tspan class="mono">False</tspan>: duplicate)</text>
+<path class="a d" d="M293,330 H112" marker-end="url(#ma)"/>
+<text class="lbl halo" x="200.5" y="322"><tspan class="num">5</tspan>  202 queued</text>
+<path class="a" d="M478,370 H659" marker-end="url(#ma)"/>
+<text class="lbl halo" x="570.5" y="362"><tspan class="num">6</tspan>  <tspan class="mono">run(scope_for(signal))</tspan></text>
+<path class="r d" d="M663,410 H478"/>
+<path class="r" d="M472,404 L484,416 M472,416 L484,404"/>
+<text class="lbl halo" x="570.5" y="402"><tspan class="num">7</tspan>  <tspan class="mono">GitHubError</tspan></text>
+<rect class="note" x="338" y="442" width="280" height="50" rx="8"/>
+<text class="lbl" x="478" y="460">signals back into the queue</text>
+<text class="lbl" x="478" y="478">backoff 5 s, doubled up to 300 s</text>
+<path class="a" d="M108,538 H289" marker-end="url(#ma)"/>
+<text class="lbl halo" x="200.5" y="530"><tspan class="num">8</tspan>  another delivery</text>
+<path class="a" d="M293,578 H474" marker-end="url(#ma)"/>
+<text class="lbl halo" x="385.5" y="570"><tspan class="num">9</tspan>  <tspan class="mono">submit(signal 2)</tspan></text>
+<path class="a" d="M478,618 H659" marker-end="url(#ma)"/>
+<text class="lbl halo" x="570.5" y="610"><tspan class="num">10</tspan>  one full run over both</text>
+<path class="a d" d="M663,658 H482" marker-end="url(#ma)"/>
+<text class="lbl halo" x="570.5" y="650"><tspan class="num">11</tspan>  lines</text>
+<path class="a" d="M478,698 H844" marker-end="url(#ma)"/>
+<text class="lbl halo" x="663.0" y="690"><tspan class="num">12</tspan>  <tspan class="mono">put(message)</tspan></text>
+<path class="a" d="M848,738 H1029" marker-end="url(#ma)"/>
+<text class="lbl halo" x="940.5" y="730"><tspan class="num">13</tspan>  <tspan class="mono">deliver(message)</tspan></text>
+<path class="a d" d="M1033,778 H852" marker-end="url(#ma)"/>
+<text class="lbl halo" x="940.5" y="770"><tspan class="num">14</tspan>  <tspan class="mono">False</tspan> (refused)</text>
+<rect class="note" x="708" y="810" width="280" height="32" rx="8"/>
+<text class="lbl" x="848" y="828">retry with backoff, order kept</text>
+<path class="a" d="M848,888 H1029" marker-end="url(#ma)"/>
+<text class="lbl halo" x="940.5" y="880"><tspan class="num">15</tspan>  <tspan class="mono">deliver(message)</tspan></text>
+<path class="a d" d="M1033,928 H852" marker-end="url(#ma)"/>
+<text class="lbl halo" x="940.5" y="920"><tspan class="num">16</tspan>  <tspan class="mono">True</tspan></text>
+</svg>
