@@ -33,9 +33,12 @@ Changes go through a pull request, like code.
 
 ## How The Loop runs
 
-GitHub is the single source of truth. A GitHub event reaches the Hermes gateway through the org
-webhook; the route filters it and fires the loop engine, which reads what the event concerns,
-decides with fixed rules and writes only what differs. Agents do the work that needs judgement –
+GitHub is the single source of truth. A GitHub event reaches the loop listener through the org
+webhook; the listener filters it and runs the loop engine, which reads what the event concerns,
+decides with fixed rules and writes only what differs. (The Hermes gateway route `loop` can
+consume the webhook instead – the former setup; only one of the two may be active. Both options
+side by side: [tools/README.md, *Consuming webhook signals: two
+options*](tools/README.md#consuming-webhook-signals-two-options).) Agents do the work that needs judgement –
 code, review, merge – and report back through GitHub. Colours: green GitHub, blue Hermes,
 orange our code, red the human.
 
@@ -56,27 +59,33 @@ flowchart LR
     hook["Org webhook<br/>5 events, HMAC-signed"]:::gh
   end
   funnel["Tailscale Funnel<br/>one path only"]:::infra
-  subgraph HM["Hermes gateway · profile sw-lead"]
-    route["Route “loop”<br/>payload filters · coalesce<br/>HERMES_CRON_EVENT"]:::hermes
-    cron["Cron “loop-tick”<br/>per event + hourly"]:::hermes
-    deliver["Bot Chat delivery<br/>queue, ~4 s"]:::hermes
+  subgraph LS["loop-listener · systemd"]
+    sources["Source adapters<br/>webhook · timer · jobwatch<br/>LOOP_SOURCES"]:::ours
+    queue["Queue + dispatcher<br/>serial · event time · retry"]:::ours
+    engine["Loop engine<br/>run_scope"]:::ours
+    sink["Sink adapter<br/>LOOP_SINK"]:::ours
+  end
+  subgraph HM["Hermes · profile sw-lead"]
+    deliver["Cron “loop-deliver”<br/>outbox → Bot Chat"]:::hermes
     dev["Developer agent<br/>one-shot job per card"]:::hermes
     lead["Lead agent<br/>refine, review, merge"]:::hermes
+    route["Option B, alternative<br/>route “loop” → cron “loop-tick”"]:::alt
   end
-  engine["Loop engine<br/>python3 -m loop tick"]:::ours
   owner -- "pulls cards to Goal, approves" --> board
   board --> hook
   repos --> hook
-  hook --> funnel --> route --> cron --> engine
+  hook --> funnel --> sources --> queue --> engine
   engine -- "1 GraphQL read, only the differences" --> board
   engine -- "start: dev job" --> dev
-  engine -- "notices on stdout" --> deliver --> lead
+  engine --> sink -- "outbox" --> deliver -- "Bot Chat" --> lead
   dev -- "gh / git: branch, PR" --> repos
   lead -- "gh: review, merge" --> repos
+  funnel -. "option B · only one active" .-> route -.-> engine
   classDef gh fill:#e6f4ea,stroke:#2e7d32,color:#1b1b1b
   classDef hermes fill:#e3f0fb,stroke:#1565c0,color:#1b1b1b
   classDef ours fill:#fff1e0,stroke:#ef6c00,color:#1b1b1b
   classDef infra fill:#f2f2f2,stroke:#757575,color:#1b1b1b
+  classDef alt fill:#e3f0fb,stroke:#1565c0,color:#1b1b1b,stroke-dasharray:5 4
 ```
 
 </details>

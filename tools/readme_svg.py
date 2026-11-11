@@ -79,13 +79,14 @@ class Canvas:
         self.cards: list[tuple[float, float, float, float]] = []
 
     def frame(self, box: tuple[float, float, float, float], colour: str, label: str,
-              bottom: bool = False) -> None:
-        """A tinted frame (x, y, w, h) around one system, its name top or bottom left."""
+              bottom: bool = False, right: bool = False) -> None:
+        """A tinted frame (x, y, w, h) around one system, its name top or bottom, left or right."""
         x, y, w, h = box
         self.parts.append(f'<rect class="frame f-{colour}" x="{x}" y="{y}" width="{w}" '
                           f'height="{h}" rx="16"/>')
         ty = y + h - 9 if bottom else y + 24
-        self.parts.append(f'<text class="gk k-{colour}" x="{x + 16}" y="{ty}">{esc(label)}</text>')
+        cls, tx = (f"gk k-{colour} end", x + w - 16) if right else (f"gk k-{colour}", x + 16)
+        self.parts.append(f'<text class="{cls}" x="{tx}" y="{ty}">{esc(label)}</text>')
 
     def card(self, box: tuple[float, float, float, float], colour: str, lines: list[str],
              patch: bool = False) -> None:

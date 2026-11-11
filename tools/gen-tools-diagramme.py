@@ -10,6 +10,7 @@ from __future__ import annotations
 import pathlib
 import sys
 
+from readme_options import webhook_options
 from readme_sequence import webhook_retry
 from readme_svg import Canvas
 
@@ -174,7 +175,8 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     pictures = {"tools-engine-run": engine_run(), "tools-hermes-side": hermes_side(),
                 "tools-listener": listener(), "tools-ports": ports(),
-                "tools-webhook-retry": webhook_retry()}
+                "tools-webhook-retry": webhook_retry(),
+                "tools-webhook-options": webhook_options()}
     for name, canvas in pictures.items():
         for path in canvas.write(out, name):
             print(path)

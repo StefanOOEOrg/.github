@@ -55,7 +55,8 @@ That one notice exits 0, because Hermes delivers only a successful run's output 
 
 Since 2026-11-10 the org webhook no longer goes through Hermes: a trigger of the Hermes route `loop`
 could get lost while the cron `loop-tick` was busy (LESSONS.md). `python3 -m loop listen`, the
-systemd service `loop-listener`, takes its place; no polling of GitHub.
+systemd service `loop-listener`, takes its place; no polling of GitHub. Both ways side by side, with
+when to choose which: *[Consuming webhook signals: two options](#consuming-webhook-signals-two-options)*.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../docs/diagrams/tools-listener-dark.svg">
@@ -148,6 +149,33 @@ in the outbox for the next trigger or the job's 60-minute schedule.
    which need a run even when nothing happens on GitHub; it also catches a webhook GitHub failed to
    deliver. Without any periodic run those rules fire only on the next event.
    `loop-jobwatch` stays: a developer job's end is not a GitHub event (local file, no GitHub call).
+
+## Consuming webhook signals: two options
+
+The org webhook's signals can reach the engine in two ways. Both start at the same org webhook
+and Tailscale Funnel and end at the same engine (`tools/loop`) and Lead; they differ in what
+receives the event and how the Lead's lines get out. **Option A, directly through the loop
+listener, is the default and the recommendation;** option B, through the Hermes gateway, is the
+setup until 2026-11-10 and stays possible as a fallback. **Only one may be active:** the Funnel has
+one target, and with both consuming the same event every run happens twice.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../docs/diagrams/tools-webhook-options-dark.svg">
+  <img alt="Two options to consume the org webhook's signals, from the same start (GitHub org webhook, Tailscale Funnel) to the same goal (loop engine, Lead). Option A, the default: the loop listener's webhook source, serial queue and dispatcher, the engine in-process and the deliverer's sink through the outbox cron to the Lead; no lost events. Option B: the Hermes gateway route loop, the cron loop-tick with HERMES_CRON_EVENT, the engine and its stdout through Bot Chat to the Lead; no own service, but an event can get lost while loop-tick is busy. Only one option may be active, else every event runs twice" src="../docs/diagrams/tools-webhook-options-light.svg">
+</picture>
+
+| | A · direct: `loop-listener` (default) | B · through Hermes: route `loop` + cron `loop-tick` |
+|---|---|---|
+| Path | Funnel → `GitHubWebhookSource` → serial queue + dispatcher → engine in-process → deliverer → sink `command` / `hermes-outbox` → cron `loop-deliver` → Bot Chat → Lead | Funnel → Hermes webhook adapter → route `loop` (filters, `cron_job_on_busy`: coalesce) → cron `loop-tick` (`HermesCronSource`, `HERMES_CRON_EVENT`) → engine → `StdoutSink` → Bot Chat → Lead |
+| Reliability | No accepted event is lost while the process runs: queue, retry with backoff, a full run at every start; independent of a busy Hermes job; a slow Lead turn never holds up a run | A trigger that arrives while `loop-tick` runs is coalesced, its event lost until the next full run (hourly, or a job end); a failed run's event only through the job watch's retry (*A failed run*) |
+| Operation | One more systemd service (`loop-listener`), its secret and env file; delivery still uses one Hermes cron (`loop-deliver`) | No own service, everything inside the Hermes gateway; needs the local Hermes patch (`hermes-config/patches`, *The Hermes side*) |
+| Configuration | Funnel → `http://127.0.0.1:8655`; `LOOP_SOURCES` (default `webhook,timer`), `LOOP_SINK` (default `command`), `LOOP_DELIVER_CMD` / `LOOP_OUTBOX_TRIGGER`; route `loop` off, `loop-tick` paused | Funnel → the Hermes webhook port; route `loop` in `~/.hermes/webhook_subscriptions.json`; cron `loop-tick` active (per event + hourly), `LOOP_TICK_SINK` (default `stdout`); `loop-listener` stopped |
+| Switching | B → A: the steps of *[Migration on the TC](#migration-on-the-tc)* | A → B: point the Funnel back at the Hermes webhook port, add the route `loop` again, resume the paused `loop-tick`, then `systemctl disable --now loop-listener` |
+
+In both options `loop-jobwatch` stays, and the engine is the same code with the same rules; only
+the adapters around it differ (*[Signal sources and sinks](#signal-sources-and-sinks)*). Switch in
+the order given, so that for a moment rather no consumer runs than two: an event missed in between
+is caught by the next full run.
 
 ## Signal sources and sinks
 

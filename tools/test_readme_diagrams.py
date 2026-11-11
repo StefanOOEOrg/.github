@@ -25,7 +25,7 @@ def _generate(out_dir: pathlib.Path) -> list[pathlib.Path]:
 def test_committed_svgs_match_the_generator(tmp_path: pathlib.Path) -> None:
     """Every generated SVG equals its committed copy, byte for byte."""
     written = _generate(tmp_path)
-    assert len(written) == 10
+    assert len(written) == 12
     for path in written:
         committed = DIAGRAMS / path.name
         assert committed.read_text(encoding="utf-8") == path.read_text(encoding="utf-8"), (
@@ -33,10 +33,10 @@ def test_committed_svgs_match_the_generator(tmp_path: pathlib.Path) -> None:
 
 
 def test_readme_pictures_exist_in_both_themes() -> None:
-    """The README has no Mermaid left and links five pictures, each light and dark."""
+    """The README has no Mermaid left and links six pictures, each light and dark."""
     readme = (ROOT / "tools" / "README.md").read_text(encoding="utf-8")
     names = set(re.findall(r"docs/diagrams/(tools-[a-z-]+)-(?:light|dark)\.svg", readme))
-    assert len(names) == 5
+    assert len(names) == 6
     assert "```mermaid" not in readme
     for name in names:
         for theme in ("light", "dark"):
