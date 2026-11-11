@@ -1,13 +1,14 @@
 """assignee(card): exactly one assignee per card, whoever acts next. First matching rule wins.
 
 A1..A10 are the rules of the former assignee_sync.next_actor, P1..P3 the blocker rules of its
-plan() (removed, in the git history up to 18f3b46).
+plan() (removed, in the git history up to 18f3b46). A11 is new: a failed start (D11).
 """
 
 from __future__ import annotations
 
 from loop import config
 from loop.model import Board, Card, PullRequest
+from loop.rules.failed_start import start_failed
 
 MANUAL_WINS = ("Backlog", "Verify", None)  # a manual assignment of the owner wins (A2)
 
@@ -36,8 +37,9 @@ def pr_actor(pr: PullRequest) -> str:
 
 
 def _goal(card: Card) -> str:
-    """A4: without a task order the Lead refines it; A6: else the developer."""
-    return config.DEV if card.task.has_order else config.LEAD
+    """A4: without a task order the Lead refines it; A11: after a failed start the Lead clears
+    the cause (D11); A6: else the developer."""
+    return config.DEV if card.task.has_order and not start_failed(card) else config.LEAD
 
 
 def _action(card: Card) -> str:

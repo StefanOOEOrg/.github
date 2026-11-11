@@ -93,7 +93,8 @@ def test_start_reverts_to_goal_when_the_job_cannot_be_created(tmp_path, monkeypa
     out = decide(board(card(5, "Goal")), set(), NOW, lambda repo: None)
     lines, log = apply(out, GitHubWriter(rec), Store(tmp_path / "s.json"), NOW, True)
     statuses = [c for c in rec.calls if "o=o" in c]
-    assert statuses[-1].endswith("o=oGoal") and not log and not lines
+    assert statuses[-1].endswith("o=oGoal") and not log
+    assert lines and lines[0].startswith("Start fehlgeschlagen: StefanOOEOrg/repo-a#5")
     assert any("the start failed while creating the developer job" in c for c in rec.calls)
 
 

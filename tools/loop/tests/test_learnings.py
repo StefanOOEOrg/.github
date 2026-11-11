@@ -43,7 +43,7 @@ def test_unresolvable_subject_skips_the_one_card_run():
     def run(args):
         raise NotFound("gh: Could not resolve to a Repository with the name 'O/r'")
     out = tick.decide_scope(GitHubClient(run), ONE, datetime(2026, 11, 8, tzinfo=UTC))
-    assert not out.board.add and not out.board.status and not out.starts
+    assert not out.board.add and not out.board.status and not out.dispatch.starts
 
 
 def test_transport_error_still_fails_the_run(monkeypatch):

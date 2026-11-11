@@ -266,4 +266,7 @@ changes the state machine, `LOOP_VERIFY_BACK_TO_ACTION=1` (a Verify card goes ba
 its PR was closed without a merge), is off: a proposal, not in use.
 
 Every run logs one summary line, `run <event>: n status, n assignee, n close(s), n start(s), n
-notice(s) printed`, counting every kind of write, so a run that wrote something never looks quiet.
+failed start(s), n notice(s) printed`, counting every kind of write, so a run that wrote something
+never looks quiet; `start(s)` counts only starts that worked. A failed start comments once (with
+the marker `<!-- loop:start-failed -->`), goes to the Lead with a `Start fehlgeschlagen` line, and
+is skipped while that comment is the card's latest change; the same run tries the next card.

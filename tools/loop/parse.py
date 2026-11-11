@@ -74,8 +74,9 @@ def parse_card(item: dict, issue: dict) -> Card:
     state = CardState(issue["state"] == "OPEN", status.get("name"), when(status.get("updatedAt")),
                       (item.get("instance") or {}).get("name"), when(issue.get("closedAt")),
                       item.get("id", ""), _reopened(issue))
+    comment = ((issue.get("comments") or {}).get("nodes") or [None])[-1] or {}
     task = Task(issue.get("body") or "", (issue.get("issueType") or {}).get("name"),
-                (issue.get("subIssues") or {}).get("totalCount", 0))
+                (issue.get("subIssues") or {}).get("totalCount", 0), comment.get("body") or "")
     blockers = tuple(Blocker(b["repository"]["nameWithOwner"], b["number"], b["state"] == "OPEN")
                      for b in (issue.get("blockedBy") or {}).get("nodes", []))
     linked = (issue.get("closedByPullRequestsReferences") or {}).get("nodes", [])

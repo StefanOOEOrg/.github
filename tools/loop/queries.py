@@ -25,7 +25,7 @@ fragment Issue on Issue {
   blockedBy(first: 10) { nodes { number state repository { nameWithOwner } } }
   timelineItems(last: 1, itemTypes: [ASSIGNED_EVENT]) { nodes { ... on AssignedEvent {
     createdAt actor { login } assignee { ... on User { login } } } } }
-  comments(last: 1) { nodes { createdAt author { login } } }
+  comments(last: 1) { nodes { createdAt author { login } body } }
   reopened: timelineItems(last: 1, itemTypes: [REOPENED_EVENT]) {
     nodes { ... on ReopenedEvent { createdAt } } }
   closedByPullRequestsReferences(first: 3, includeClosedPrs: true) { nodes { ...PR } }

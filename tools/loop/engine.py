@@ -20,7 +20,7 @@ from loop.rules.checks import (
     is_stuck,
     orphan_pr,
 )
-from loop.rules.dispatch import Start, dispatch
+from loop.rules.dispatch import Dispatch, dispatch
 from loop.rules.notices import card_notices, owner_review_due, post_merge, pr_notices
 from loop.rules.status import archive_due, close_due, transition
 
@@ -41,8 +41,7 @@ class Decisions:
     """What the engine has to do in this run."""
 
     board: BoardChanges = field(default_factory=BoardChanges)
-    starts: list[Start] = field(default_factory=list)
-    blocked: list[tuple[Card, str]] = field(default_factory=list)  # comment once while it lasts
+    dispatch: Dispatch = field(default_factory=Dispatch)  # starts, blocked cards (comment once)
     stuck: list[Card] = field(default_factory=list)  # D2: hand over to the owner
     notices: list[Finding] = field(default_factory=list)  # to the Lead, via stdout
     reminders: list[tuple[PullRequest, Finding]] = field(default_factory=list)  # W6 PR comments
@@ -74,8 +73,8 @@ def decide(board: Board, jobs: set[str] | None, now: datetime,
     wants = plan(board)
     for card in board.cards:
         card_decisions(card, wants[card.key], jobs, now, out)
-    starts = dispatch(board, jobs, now, access)
-    out.starts, out.blocked = starts.starts, starts.blocked
+    out.dispatch = dispatch(board, jobs, now, access)
+    out.dispatch.replan = lambda skip: dispatch(board, jobs, now, access, skip).starts
     for pr in board.open_prs:
         out.notices += pr_notices(pr)
         if owner_review_due(pr):

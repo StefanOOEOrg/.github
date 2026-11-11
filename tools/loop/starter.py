@@ -1,8 +1,9 @@
-"""Start a card (D10): worktree, developer, Instance, Status Action, one-shot developer job.
+"""Start a card (D10): worktree, developer, Instance, Status Action, one developer job.
 
 The card reaches Action only together with its job: if setting the status or creating the job
-fails, it goes back to Goal and the caller comments the failed step (#57). D9 (write access of
-both bots) is checked before, see ``access``. A branch still checked out in the worktree of a busy
+fails, it goes back to Goal (#57). On any failure the caller comments the failed step, hands the
+card to the Lead and the dispatcher skips it until the card changes (D11, ``failed_start``). D9
+(write access of both bots) is checked before, see ``access``. A branch still checked out in the worktree of a busy
 instance is no failure: the card stays on Goal without a comment and starts in a later run.
 """
 
@@ -10,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 from loop import config
@@ -19,6 +21,14 @@ from loop.writer import GitHubWriter
 logger = logging.getLogger(__name__)
 
 WAITING = "waiting"  # start() result: not started, nothing failed, the next run tries again
+
+
+@dataclass(frozen=True)
+class Failure:
+    """start() result of a failed start: the step and the last line of the error."""
+
+    step: str
+    detail: str = ""
 
 
 class BranchInUse(RuntimeError):
@@ -53,7 +63,8 @@ def free_branch(clone: Path, branch: str, tree: Path, busy: frozenset[str]) -> N
     if holder is None or holder == tree:
         return
     if holder.parent != clone / ".worktrees":
-        raise RuntimeError(f"branch {branch} is checked out in {holder}")
+        raise RuntimeError(f"branch {branch} is checked out in {holder}, outside the engine's "
+                           "worktrees: free it there (push, then git worktree remove)")
     if holder.name in busy:
         raise BranchInUse(f"branch {branch} is checked out by the busy instance {holder.name}")
     logger.info("removing the stale worktree %s that holds %s", holder, branch)
@@ -94,9 +105,9 @@ def create_job(card: Card, instance: str, tree: str, again: bool) -> None:
 
 
 def start(card: Card, instance: str, writer: GitHubWriter,
-          busy: frozenset[str] = frozenset()) -> str | None:
+          busy: frozenset[str] = frozenset()) -> Failure | str | None:
     """Start the card; None on success, ``WAITING`` if its branch is still in use by a busy
-    instance, else the step that failed (the card is back on Goal)."""
+    instance, else the ``Failure`` (the card is back on Goal)."""
     if writer.dry_run:
         logger.info("dry run, not started: %s#%s on %s", card.ref.repo, card.ref.number, instance)
         return None
@@ -115,10 +126,10 @@ def start(card: Card, instance: str, writer: GitHubWriter,
         return WAITING
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError,
             RuntimeError) as error:
-        detail = (getattr(error, "stderr", None) or str(error)).strip().splitlines()[-1:]
+        detail = " ".join((getattr(error, "stderr", None) or str(error)).strip().splitlines()[-1:])
         logger.error("start of %s#%s failed while %s: %s", card.ref.repo, card.ref.number, step,
-                     " ".join(detail))
+                     detail)
         if step in ("setting instance and status", "creating the developer job"):
             writer.set_field(card.state.item, "Status", "Goal")
-        return step
+        return Failure(step, detail)
     return None

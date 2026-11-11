@@ -9,7 +9,7 @@ import pytest
 from loop import starter
 from loop.apply import apply
 from loop.engine import Decisions
-from loop.rules.dispatch import Start, dispatch
+from loop.rules.dispatch import Dispatch, Start, dispatch
 from loop.rules.status import transition
 from loop.store import Store
 from loop.tests.builders import LEAD, NOW, ago, board, card, pr, review
@@ -110,7 +110,7 @@ def test_waiting_start_writes_nothing_and_comments_nothing(tmp_path, monkeypatch
     def busy(*_args):
         raise starter.BranchInUse("busy")
     monkeypatch.setattr(starter, "free_branch", busy)
-    out = Decisions(starts=[Start(card(1, "Goal", changed=ago(5)), "dev-1")])
+    out = Decisions(dispatch=Dispatch([Start(card(1, "Goal", changed=ago(5)), "dev-1")]))
     writer = GitHubWriter(lambda args: calls.append(args) or "{}")
     lines, log = apply(out, writer, Store(tmp_path / "s.json"), NOW, True)
     assert not calls and not lines and not log
