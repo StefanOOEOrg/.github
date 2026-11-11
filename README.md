@@ -5,42 +5,37 @@ Organization-wide community health files for `StefanOOEOrg`.
 ## Why The Loop
 
 This organization practises loop engineering: every task runs through the same loop on its own
-instead of being planned into sprints. Processes like Scrum were designed for teams of humans –
-capacity, estimates, stand-ups – and do not fit an agentic team with a human reviewer, where the
-limit is the human's attention at the gates, not the work in between.
+instead of being planned into sprints. Scrum and similar processes were designed for teams of
+humans – capacity, estimates, stand-ups; in an agentic team with a human reviewer the limit is the
+human's attention at the gates, not the work in between.
 
-The idea behind it: the process lives in a script – deterministic, tested and traceable in its log
-– and decides every transition on the board. Language models are used only where judgement is
-needed, for writing the code and for reviewing it; the human sets the goals at the entry gate and
-approves at the exit gate.
+The process lives in a script – deterministic, tested, traceable in its log – that decides every
+transition on the board. Language models are used only where judgement is needed: writing and
+reviewing code. The human sets the goals at the entry gate and approves at the exit gate.
 
 ## What is in this repository
 
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — the engineering guidelines every repository in this
-  organization follows. GitHub surfaces this file automatically when an issue or pull request is
-  created in any repository of the organization that has no own `CONTRIBUTING.md`.
-- [`PROCESS.md`](PROCESS.md) — how the organization develops software: roles, board, workflow and
-  quality gates.
+Changes go through a pull request, like code.
+
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — the engineering guidelines of every repository here;
+  GitHub shows it for any repository of the organization without its own `CONTRIBUTING.md`.
+- [`PROCESS.md`](PROCESS.md) — roles, board, workflow and quality gates.
 - [`LESSONS.md`](LESSONS.md) — every process correction with problem, cause, measure and status.
 - [`profile/README.md`](profile/README.md) — the organization profile page, shown once this
   repository is public.
-- [`assets/`](assets/) — the swimlane diagrams embedded in `PROCESS.md` and `CONTRIBUTING.md`;
-  generated, not hand-edited.
-- [`tools/`](tools/) — the automation that runs the process: the loop engine `tools/loop` and the
-  diagram generators; `tools/install.sh` copies it into a Hermes profile.
-
-Changes go through a pull request, like code.
+- [`assets/`](assets/) — the generated swimlane diagrams of `PROCESS.md` and `CONTRIBUTING.md`.
+- [`tools/`](tools/) — the automation: the loop engine `tools/loop`, the diagram generators and
+  `tools/install.sh`, which copies it into a Hermes profile.
 
 ## How The Loop runs
 
-GitHub is the single source of truth. A GitHub event reaches the loop listener through the org
-webhook; the listener filters it and runs the loop engine, which reads what the event concerns,
-decides with fixed rules and writes only what differs. (The Hermes gateway route `loop` can
-consume the webhook instead – the former setup; only one of the two may be active. Both options
-side by side: [tools/README.md, *Consuming webhook signals: two
-options*](tools/README.md#consuming-webhook-signals-two-options).) Agents do the work that needs judgement –
-code, review, merge – and report back through GitHub. Colours: green GitHub, blue Hermes,
-orange our code, red the human.
+GitHub is the single source of truth. An event reaches the loop listener through the org webhook;
+the listener filters it and runs the loop engine, which reads what the event concerns, decides with
+fixed rules and writes only what differs. Agents do the work that needs judgement – code, review,
+merge – and report back through GitHub. (Alternatively the Hermes gateway route `loop` consumes the
+webhook, the former setup; only one may be active: [*Consuming webhook signals: two
+options*](tools/README.md#consuming-webhook-signals-two-options).) Colours: green GitHub, blue
+Hermes, orange our code, red the human.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
@@ -90,9 +85,9 @@ flowchart LR
 
 </details>
 
-Every card follows one state machine. The engine evaluates it from the facts on each run (not from
-the events), so a missed event is repaired by the next run; Backlog and Goal stay the product
-owner's.
+Every card follows one state machine, evaluated from the facts on each run rather than from the
+events, so the next run repairs a missed event; Backlog and Goal stay the product owner's. Start
+conditions, transitions and assignees: [PROCESS.md](PROCESS.md#project-workflows).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/loop-states-dark.svg">
@@ -117,11 +112,3 @@ stateDiagram-v2
 ```
 
 </details>
-
-- **Goal → Action:** a free instance, no overlap of *Allowed files* with a running card, no open
-  blocker, a task order (Branch and Allowed files), not a Feature, both bots can write; the first
-  startable card in Goal order starts.
-- **Verify:** the assignee follows the PR – review requested → Lead; Lead approved → product
-  owner; changes requested → Developer (from the third round → product owner); product owner
-  approved → Lead merges.
-

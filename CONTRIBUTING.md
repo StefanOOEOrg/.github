@@ -1,32 +1,24 @@
 # Engineering Guidelines
 
 These rules apply to every repository in the `StefanOOEOrg` organization — Python services, MCP
-servers, and the Angular frontend alike. They are the single source of truth for code quality and
-**supersede** any convention that a repository inherited from an earlier tool session or an earlier
-project. When a repository disagrees with this document, the repository is wrong.
-
-They address both audiences: people and coding agents. A rule that cannot be checked by a command,
-a tool config, or a reviewer is written here as a rule but will not survive; prefer the mechanical
-form.
-
-Changes to this document go through a pull request here, like code.
-
-How work is organised (roles, board, reviews): see [PROCESS.md](PROCESS.md).
+servers and the Angular frontend — for people and coding agents alike. They are the single source
+of truth for code quality and **supersede** any inherited convention: when a repository disagrees,
+the repository is wrong. Prefer rules a command, tool config or reviewer can check; others do not
+survive. Changes go through a pull request here. How work is organised (roles, board, reviews):
+[PROCESS.md](PROCESS.md).
 
 ---
 
 ## 1. Language
 
-Code, identifiers, comments, docstrings, commit messages, pull-request and issue text, README and
-every other document in a repository are written in **English**.
-
-German is used in conversation only. German artifacts that already exist (for example an older
-architecture document) are translated when the file is next touched, not in a mass rewrite.
+Code, identifiers, comments, docstrings, commit messages, issue types, project fields, titles,
+pull-request and issue text, README and every other document are written in **English**. German is
+for conversation only; existing German artifacts (e.g. an older architecture document) are
+translated when the file is next touched, not in a mass rewrite.
 
 ## 2. Formatting and linting
 
-**ruff** is the one and only Python linter and formatter. No second tool, no per-repo linter
-preference.
+**ruff** is the only Python linter and formatter — no second tool, no per-repo preference.
 
 ```toml
 # pyproject.toml
@@ -38,91 +30,84 @@ select = ["E", "F", "I", "UP", "B"]
 ```
 
 - Gates: `ruff check .` and `ruff format --check .` — both must exit 0.
-- Rules are not switched off globally and no rule is added to an ignore list. A single line that
-  genuinely cannot comply gets an inline exception **with the reason**:
+- No rule is switched off globally or added to an ignore list. A single line that genuinely cannot
+  comply gets an inline exception **with the reason**:
   `# noqa: E501  # long generated table name`.
 - New dependencies for linting are limited to `ruff` itself.
 
 ## 3. Types
 
-Every public function and method carries type hints on its signature — parameters and return value.
-`Any` is a last resort and needs a comment explaining why the type is genuinely unknown.
-
-No static type checker is a gate. Type hints are for readers and editors, not for a mypy run.
+Every public function and method has type hints for parameters and return value. `Any` is a last
+resort with a comment on why the type is genuinely unknown. No static type checker is a gate: hints
+are for readers and editors, not for a mypy run.
 
 ## 4. Structure and complexity
 
-- Functions stay around **30 lines**. A file stays around **300 lines**. Both are smell thresholds,
-  not laws: exceeding them is fine when the unit is genuinely one responsibility.
-- Split **by responsibility**, never by line count. A file split "to get under the limit" produces
-  two files with a fake boundary — split along the seam where the concepts actually differ, and say
-  in the module docstring which concept went where.
-- Prefer the simplest construct that works. No abstraction layers that only have one implementation
-  and no prospect of a second.
+- Functions around **30 lines**, files around **300 lines** — smell thresholds, not laws; exceeding
+  them is fine for a unit that is genuinely one responsibility.
+- Split **by responsibility**, never by line count ("to get under the limit" makes a fake
+  boundary): split where the concepts differ and say in the module docstring which went where.
+- The simplest construct that works; no abstraction layer with one implementation and no prospect
+  of a second.
 
 ## 5. Docstrings and comments
 
 - Every module, class, and public function has a docstring.
-- A function docstring states what it does, `Args`, `Returns`, and `Raises` — and, where it matters,
-  *why* this shape was chosen over the obvious alternative.
+- A function docstring states what it does, `Args`, `Returns`, `Raises` — and, where it matters,
+  *why* this shape beats the obvious alternative.
 - Comments explain **why**, never what the line already says.
-- Incident history does not live in code. "Fixed on 2026-10-25 because X collapsed" belongs in
-  `docs/`, with a pointer from the code at most.
+- Incident history ("fixed on 2026-10-25 because X collapsed") belongs in `docs/`, not in code —
+  at most a pointer from the code.
 
 ## 6. Error handling
 
 - No bare `except:` and no `except Exception: pass`.
-- Each package defines its own exception class (for example `class ArgusError(Exception)`), raised
-  with a message that names the offending value or path.
-- Exactly one broad `except Exception` is allowed, and only at a system boundary (an MCP tool, a
-  live loop, a CLI entry point) where it exists to convert *any* failure into a defined result —
-  an error payload with `is_error: True`, a crash alert, an exit code. That handler carries a
-  comment saying so.
-- Never let a raw library exception reach the caller of a tool or API surface; wrap it in the
-  package's own type with a message the user can act on.
+- Each package has its own exception class (e.g. `class ArgusError(Exception)`), raised with a
+  message naming the offending value or path.
+- Exactly one broad `except Exception` is allowed, only at a system boundary (MCP tool, live loop,
+  CLI entry point), to turn *any* failure into a defined result — an error payload with
+  `is_error: True`, a crash alert, an exit code — with a comment saying so.
+- No raw library exception reaches the caller of a tool or API; wrap it in the package's type with
+  a message the user can act on.
 
 ## 7. Logging
 
 - `logging`, never `print`. Repositories may wrap it (`get_logger(name)`); the wrapper stays thin.
 - Lazy `%`-formatting — `logger.info("loaded model %s", version)`, not f-strings in log calls.
-- INFO for state changes worth reconstructing a session from, WARNING for anomalies a human should
-  see, ERROR for failures that end an operation.
+- INFO: state changes to reconstruct a session from; WARNING: anomalies a human should see; ERROR:
+  failures that end an operation.
 - Never log secrets, tokens, or full payloads of personal data.
 
 ## 8. Configuration and secrets
 
 - Configuration comes from the environment; secrets never appear in code, tests, issues, pull
-  requests, commit messages, or logs.
-- A repository ships `.env.example` with placeholder values; the real `.env` is gitignored.
-- Defaults in code must be safe and machine-independent: `127.0.0.1`, never a private LAN address.
-  Machine-specific values live in the untracked `.env`.
-- A missing optional configuration file is a normal state (feature off, hint in the UI), not an
-  error. A malformed one falls back to defaults **and** warns visibly.
+  requests, commit messages or logs.
+- A repository ships `.env.example` with placeholders; the real `.env` is gitignored and holds the
+  machine-specific values. Defaults in code are safe and machine-independent: `127.0.0.1`, never a
+  private LAN address.
+- A missing optional configuration file is a normal state (feature off, hint in the UI); a
+  malformed one falls back to defaults **and** warns visibly.
 
 ## 9. Tests
 
-- `pytest`. Tests are written **before** the implementation: a failing test that proves the gap,
-  then the code that makes it pass.
+- `pytest`, **test-first**: a failing test that proves the gap, then the code that passes it.
 - Test files mirror the package layout (`tests/<package>/test_<module>.py`).
-- Unit tests run without network, GPU, or database. External systems are replaced by fakes,
-  fixtures, or recorded payloads — a test that needs the internet is an integration test and is
-  marked and run separately.
+- Unit tests run without network, GPU or database (fakes, fixtures, recorded payloads); a test that
+  needs the internet is an integration test, marked and run separately.
 - No `skip` or `xfail` to get a suite green. A skipped test is a test that does not exist.
 - Assertions check behaviour (return value, side effect, state), not that a call returned at all.
 
 ## 10. Coverage
 
-CI enforces `--cov-fail-under=80`. A number in a Makefile that CI does not check is decoration.
-
-Where 80 % is out of reach for a repository today, the gap is fixed or the repository's threshold is
-raised explicitly in this document — never silently dropped in CI.
+CI enforces `--cov-fail-under=80`; a number in a Makefile that CI does not check is decoration.
+Where 80 % is out of reach today, the gap is fixed or the repository's threshold is set explicitly
+in this document — never silently dropped in CI.
 
 ## 11. Dependencies
 
-- Runtime and development dependencies are **pinned** (`==`). Lower bounds only cost a CI run and a
-  debugging afternoon: an unpinned `torch` once pulled a 4 GB CUDA stack into a CPU-only test job
-  and took the whole pipeline down.
-- New dependency = a line in the pull request saying why the standard library or an existing
+- Runtime and development dependencies are **pinned** (`==`); an unpinned `torch` once pulled a
+  4 GB CUDA stack into a CPU-only test job and took the pipeline down.
+- New dependency = a line in the pull request on why the standard library or an existing
   dependency does not do the job.
 - Development tooling is separated from runtime requirements.
 
@@ -133,17 +118,16 @@ raised explicitly in this document — never silently dropped in CI.
   `fix/<issue>-<slug>` for a standalone bug fix. Always branched from `upstream/main`.
 - One logical change per commit. The message says what changed and why; format
   `<area>: <what> (<context>)`, with a body when the why is not obvious.
-- Pull requests reference their issue (`Closes #n` or "Part of #n") and state how the change was
-  verified.
-- Merging is done by the Lead after the product owner's approval, as a merge commit (see [PROCESS.md](PROCESS.md)).
-- A pull request that changes behaviour ships tests that fail without it.
+- Pull requests reference their issue (`Closes #n` or "Part of #n"), state how the change was
+  verified and, if they change behaviour, ship tests that fail without it.
+- The Lead merges after the product owner's approval, as a merge commit ([PROCESS.md](PROCESS.md)).
 
 ## 13. Frontend (Angular / TypeScript)
 
 - TypeScript `strict` mode; no `any`, no non-null assertion as a shortcut.
 - ESLint and Prettier with the repository's committed config; both are CI gates.
 - Component state via Signals where the framework offers them; no ad-hoc mutable service fields.
-- Templates stay logic-free: no computation in the template that belongs in the component.
+- Templates stay logic-free: computation belongs in the component.
 
 ---
 
@@ -161,12 +145,13 @@ raised explicitly in this document — never silently dropped in CI.
 
 ## 14. Contributions from outside the organization
 
-Inbound changes are accepted under the repository's license (MIT, see `LICENSE`). Opening a pull request is the
-agreement: you confirm that you wrote the change or hold the rights to submit it, and you license it under the same
-terms. No separate CLA document is required.
+All public repositories are MIT licensed (`LICENSE`), and inbound changes are accepted under that
+license. Opening a pull request is the agreement: you confirm that you wrote the change or hold the
+rights to submit it, and license it under the same terms. No separate CLA.
 
-External pull requests arrive as forks, their first workflow run is approved by a maintainer, and they are reviewed
-by the Lead, approved by the product owner and merged by the Lead (§12).
+External pull requests arrive as forks. CI for a fork PR runs only after a maintainer approves the
+workflow run; workflows use `pull_request` (no secrets, read-only token). They are reviewed by the
+Lead, approved by the product owner and merged by the Lead (§12).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://github.com/StefanOOEOrg/.github/raw/main/assets/process-external-dark.svg">
@@ -175,10 +160,7 @@ by the Lead, approved by the product owner and merged by the Lead (§12).
 
 ## Rollout
 
-A repository adopts this document the next time it is touched in a way that already changes its
-tooling; there is no big-bang migration across all repositories. The adoption is complete when the
-enforcement map holds for that repository — ruff config present, CI gates green, dependencies
-pinned, `.pylintrc` removed.
-
-Repositories that still run `pylint` are not in violation while their migration is pending; they are
-in violation the moment their linter is touched and left on the old stack.
+No big-bang migration: a repository adopts this document the next time a change touches its
+tooling. Adoption is complete when the enforcement map holds — ruff config present, CI gates green,
+dependencies pinned, `.pylintrc` removed. A repository still on `pylint` is not in violation while
+its migration is pending, only once its linter is touched and left on the old stack.
