@@ -33,9 +33,12 @@ Changes go through a pull request, like code.
 
 ## How The Loop runs
 
-GitHub is the single source of truth. A GitHub event reaches the Hermes gateway through the org
-webhook; the route filters it and fires the loop engine, which reads what the event concerns,
-decides with fixed rules and writes only what differs. Agents do the work that needs judgement –
+GitHub is the single source of truth. A GitHub event reaches the loop listener through the org
+webhook; the listener filters it and runs the loop engine, which reads what the event concerns,
+decides with fixed rules and writes only what differs. (The Hermes gateway route `loop` can
+consume the webhook instead – the former setup; only one of the two may be active. Both options
+side by side: [tools/README.md, *Consuming webhook signals: two
+options*](tools/README.md#consuming-webhook-signals-two-options).) Agents do the work that needs judgement –
 code, review, merge – and report back through GitHub. Colours: green GitHub, blue Hermes,
 orange our code, red the human.
 

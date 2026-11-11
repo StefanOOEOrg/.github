@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 1040" width="1300" height="1040" role="img" aria-label="Two options to consume the org webhook's signals, from the same start (GitHub org webhook, Tailscale Funnel) to the same goal (loop engine, Lead). Option A, the default: the loop listener's webhook source, serial queue and dispatcher, the engine in-process and the deliverer's sink through the outbox cron to the Lead; no lost events. Option B: the Hermes gateway route loop, the cron loop-tick with HERMES_CRON_EVENT, the engine and its stdout through Bot Chat to the Lead; no own service, but an event can get lost while loop-tick is busy. Only one option may be active, else every event runs twice">
+<title>Consuming webhook signals: two options</title>
+<style>
+text{font-family:-apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Helvetica, Arial, sans-serif;fill:#e6edf3;text-anchor:middle}
+.kick{font-size:10.5px;font-weight:600;letter-spacing:1.1px}
+.gk{font-size:11px;font-weight:700;letter-spacing:1.4px;text-anchor:start}
+.title{font-size:17px;font-weight:700}
+.sub{font-size:12.5px;fill:#9198a1}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px}
+.lbl{font-size:12.5px;fill:#9198a1}
+.num{font-weight:700;fill:#e6edf3}
+.start{text-anchor:start}.end{text-anchor:end}
+.halo{paint-order:stroke;stroke:#0d1117;stroke-width:3.5px;stroke-linejoin:round}
+.b{fill:#161b22;stroke-width:1.6}
+.red{stroke:#f0596b}.gh{stroke:#3fb950}.hm{stroke:#58a6ff}.ours{stroke:#f0883e;stroke-width:2.2}.infra{stroke:#9198a1}
+.patch{stroke-dasharray:6 4}
+.k-red{fill:#f0596b}.k-gh{fill:#3fb950}.k-hm{fill:#58a6ff}.k-ours{fill:#f0883e}.k-infra{fill:#9198a1}
+.frame{stroke-width:1.2}
+.f-gh{fill:#3fb950;fill-opacity:0.08;stroke:#3fb950}
+.f-hm{fill:#58a6ff;fill-opacity:0.08;stroke:#58a6ff}
+.f-ours{fill:#f0883e;fill-opacity:0.08;stroke:#f0883e}
+.f-infra{fill:#9198a1;fill-opacity:0.08;stroke:#9198a1}
+.note{fill:#21262d;stroke:#3d444d;stroke-width:1.2}
+path{fill:none;stroke-width:1.8}.a{stroke:#9198a1}.r{stroke:#f0596b;stroke-width:2.2}
+.d{stroke-dasharray:6 5}.life{stroke:#3d444d;stroke-width:1.5;stroke-dasharray:4 4}
+</style>
+<defs><marker id="ma" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#9198a1;stroke:none"/></marker><marker id="mr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:#f0596b;stroke:none"/></marker></defs>
+<rect class="b gh" x="535" y="20" width="230" height="84" rx="12"/>
+<text class="kick k-gh" x="650.0" y="41.0">GITHUB</text>
+<text class="title" x="650.0" y="63.0">Org webhook</text>
+<text class="sub" x="650.0" y="82.0">HMAC-signed</text>
+<rect class="b infra" x="535" y="140" width="230" height="100" rx="12"/>
+<text class="kick k-infra" x="650.0" y="169.0">TAILSCALE</text>
+<text class="title" x="650.0" y="191.0">Funnel</text>
+<text class="sub" x="650.0" y="210.0">one public path, one target</text>
+<rect class="b red" x="815" y="140" width="330" height="100" rx="12"/>
+<text class="kick k-red" x="980.0" y="161.0">ONLY ONE OPTION ACTIVE</text>
+<text class="title" x="980.0" y="183.0">Never both at once</text>
+<text class="sub" x="980.0" y="202.0">two consumers of one event</text>
+<text class="sub" x="980.0" y="218.0">= every run twice</text>
+<path class="a" d="M650,104 V136" marker-end="url(#ma)"/>
+<path class="a" d="M650,240 V260 H175 V320" marker-end="url(#ma)"/>
+<path class="a" d="M650,260 H815 V320" marker-end="url(#ma)"/>
+<text class="lbl halo" x="412" y="254">A: Funnel → listener</text>
+<text class="lbl halo" x="733" y="254">B: Funnel → Hermes</text>
+<rect class="frame f-ours" x="20" y="280" width="620" height="592" rx="16"/>
+<text class="gk k-ours end" x="624" y="863">OPTION A · DIRECT · DEFAULT, RECOMMENDED</text>
+<rect class="b ours" x="40" y="324" width="270" height="100" rx="12"/>
+<text class="kick k-ours" x="175.0" y="345.0">LOOP-LISTENER · SOURCE</text>
+<text class="title" x="175.0" y="367.0">GitHubWebhookSource</text>
+<text class="sub" x="175.0" y="386.0">HMAC · route filter</text>
+<text class="sub" x="175.0" y="402.0">202 at once</text>
+<rect class="b ours" x="40" y="460" width="270" height="100" rx="12"/>
+<text class="kick k-ours" x="175.0" y="481.0">CORE</text>
+<text class="title" x="175.0" y="503.0">Queue + dispatcher</text>
+<text class="sub" x="175.0" y="522.0">serial · dedupe · event time</text>
+<text class="sub" x="175.0" y="538.0">failed run: retry, backoff</text>
+<rect class="b ours" x="40" y="596" width="270" height="100" rx="12"/>
+<text class="kick k-ours" x="175.0" y="625.0">ENGINE</text>
+<text class="title" x="175.0" y="647.0">Loop engine</text>
+<text class="sub" x="175.0" y="666.0"><tspan class="mono">tick.run_scope</tspan>, in-process</text>
+<rect class="b ours" x="40" y="732" width="270" height="100" rx="12"/>
+<text class="kick k-ours" x="175.0" y="761.0">DELIVERER → SINK</text>
+<text class="title" x="175.0" y="783.0"><tspan class="mono">hermes-outbox</tspan> / <tspan class="mono">command</tspan></text>
+<text class="sub" x="175.0" y="802.0">outbox → cron <tspan class="mono">loop-deliver</tspan></text>
+<path class="a" d="M175,424 V456" marker-end="url(#ma)"/>
+<path class="a" d="M175,560 V592" marker-end="url(#ma)"/>
+<path class="a" d="M175,696 V728" marker-end="url(#ma)"/>
+<rect class="b infra" x="330" y="324" width="290" height="148" rx="12"/>
+<text class="kick k-infra" x="475.0" y="353.0">PROPERTIES</text>
+<text class="title" x="475.0" y="375.0">No lost events</text>
+<text class="sub" x="475.0" y="394.0">queue + retry with backoff</text>
+<text class="sub" x="475.0" y="410.0">independent of a busy Hermes job</text>
+<text class="sub" x="475.0" y="426.0">Lead delivery in its own thread</text>
+<text class="sub" x="475.0" y="442.0">every start begins with a full run</text>
+<rect class="b infra" x="330" y="504" width="290" height="148" rx="12"/>
+<text class="kick k-infra" x="475.0" y="541.0">COST</text>
+<text class="title" x="475.0" y="563.0">One more service</text>
+<text class="sub" x="475.0" y="582.0">systemd unit <tspan class="mono">loop-listener</tspan></text>
+<text class="sub" x="475.0" y="598.0">secret and env file to keep</text>
+<text class="sub" x="475.0" y="614.0">delivery still via a Hermes cron</text>
+<rect class="b infra" x="330" y="684" width="290" height="148" rx="12"/>
+<text class="kick k-infra" x="475.0" y="713.0">SELECTED BY</text>
+<text class="title" x="475.0" y="735.0">Funnel → listener</text>
+<text class="sub" x="475.0" y="754.0"><tspan class="mono">127.0.0.1:8655</tspan></text>
+<text class="sub" x="475.0" y="770.0"><tspan class="mono">LOOP_SOURCES=webhook,timer</tspan></text>
+<text class="sub" x="475.0" y="786.0"><tspan class="mono">LOOP_SINK=command</tspan></text>
+<text class="sub" x="475.0" y="802.0">route <tspan class="mono">loop</tspan> off · <tspan class="mono">loop-tick</tspan> paused</text>
+<rect class="frame f-hm" x="660" y="280" width="620" height="592" rx="16"/>
+<text class="gk k-hm end" x="1264" y="863">OPTION B · THROUGH HERMES · FORMER SETUP, FALLBACK</text>
+<rect class="b hm" x="680" y="324" width="270" height="100" rx="12"/>
+<text class="kick k-hm" x="815.0" y="345.0">HERMES GATEWAY</text>
+<text class="title" x="815.0" y="367.0">Route <tspan class="mono">loop</tspan></text>
+<text class="sub" x="815.0" y="386.0">payload filters · HMAC</text>
+<text class="sub" x="815.0" y="402.0"><tspan class="mono">cron_job_on_busy</tspan>: coalesce</text>
+<rect class="b hm" x="680" y="460" width="270" height="100" rx="12"/>
+<text class="kick k-hm" x="815.0" y="481.0">CRON · HERMESCRONSOURCE</text>
+<text class="title" x="815.0" y="503.0">Cron <tspan class="mono">loop-tick</tspan></text>
+<text class="sub" x="815.0" y="522.0"><tspan class="mono">HERMES_CRON_EVENT</tspan></text>
+<text class="sub" x="815.0" y="538.0">+ hourly run</text>
+<rect class="b ours" x="680" y="596" width="270" height="100" rx="12"/>
+<text class="kick k-ours" x="815.0" y="625.0">ENGINE</text>
+<text class="title" x="815.0" y="647.0">Loop engine</text>
+<text class="sub" x="815.0" y="666.0"><tspan class="mono">python3 -m loop tick</tspan></text>
+<rect class="b ours" x="680" y="732" width="270" height="100" rx="12"/>
+<text class="kick k-ours" x="815.0" y="753.0">SINK</text>
+<text class="title" x="815.0" y="775.0">StdoutSink</text>
+<text class="sub" x="815.0" y="794.0">Hermes delivers the</text>
+<text class="sub" x="815.0" y="810.0">cron output to Bot Chat</text>
+<path class="a" d="M815,424 V456" marker-end="url(#ma)"/>
+<path class="a" d="M815,560 V592" marker-end="url(#ma)"/>
+<path class="a" d="M815,696 V728" marker-end="url(#ma)"/>
+<rect class="b infra" x="970" y="324" width="290" height="148" rx="12"/>
+<text class="kick k-infra" x="1115.0" y="361.0">PROPERTIES</text>
+<text class="title" x="1115.0" y="383.0">No own service</text>
+<text class="sub" x="1115.0" y="402.0">runs inside the Hermes gateway</text>
+<text class="sub" x="1115.0" y="418.0">one cron job: <tspan class="mono">loop-tick</tspan></text>
+<text class="sub" x="1115.0" y="434.0">the setup until 2026-11-10</text>
+<rect class="b infra" x="970" y="504" width="290" height="148" rx="12"/>
+<text class="kick k-infra" x="1115.0" y="541.0">COST</text>
+<text class="title" x="1115.0" y="563.0">Events can get lost</text>
+<text class="sub" x="1115.0" y="582.0">a trigger while <tspan class="mono">loop-tick</tspan> runs</text>
+<text class="sub" x="1115.0" y="598.0">is coalesced: its event is gone</text>
+<text class="sub" x="1115.0" y="614.0">until the next full run (hourly)</text>
+<rect class="b infra" x="970" y="684" width="290" height="148" rx="12"/>
+<text class="kick k-infra" x="1115.0" y="721.0">SELECTED BY</text>
+<text class="title" x="1115.0" y="743.0">Funnel → Hermes</text>
+<text class="sub" x="1115.0" y="762.0">the Hermes webhook port</text>
+<text class="sub" x="1115.0" y="778.0">route <tspan class="mono">loop</tspan> on · <tspan class="mono">loop-tick</tspan> active</text>
+<text class="sub" x="1115.0" y="794.0"><tspan class="mono">loop-listener</tspan> stopped</text>
+<rect class="b hm" x="535" y="920" width="230" height="100" rx="12"/>
+<text class="kick k-hm" x="650.0" y="949.0">LEAD AGENT</text>
+<text class="title" x="650.0" y="971.0">Lead</text>
+<text class="sub" x="650.0" y="990.0">turn in Bot Chat</text>
+<path class="a" d="M175,832 V970 H531" marker-end="url(#ma)"/>
+<path class="a" d="M815,832 V970 H769" marker-end="url(#ma)"/>
+</svg>
